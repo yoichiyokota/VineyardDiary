@@ -1,0 +1,19 @@
+networkd_settings_read_from_file Sandbox is preventing this process from reading networkd settings file at "/Library/Preferences/com.apple.networkd.plist", please add an exception.
+networkd_settings_read_from_file Sandbox is preventing this process from reading networkd settings file at "/Library/Preferences/com.apple.networkd.plist", please add an exception.
+nw_resolver_can_use_dns_xpc_block_invoke Sandbox does not allow access to com.apple.dnssd.service
+nw_resolver_create_dns_service_locked [C1.1] DNSServiceCreateDelegateConnection failed: ServiceNotRunning(-65563)
+Connection 1: received failure notification
+Connection 1: failed to connect 10:-72000, reason -1
+Connection 1: encountered error(10:-72000)
+Task <DF36FCF3-1DCC-4546-BF0C-120FD9BC6669>.<1> HTTP load failed, 0/0 bytes (error code: -1003 [10:-72000])
+nw_resolver_create_dns_service_locked [C2.1] DNSServiceCreateDelegateConnection failed: ServiceNotRunning(-65563)
+Connection 2: received failure notification
+Connection 2: failed to connect 10:-72000, reason -1
+Connection 2: encountered error(10:-72000)
+Task <B2D61F5A-C80A-4BA9-938A-C6BF1862B202>.<2> HTTP load failed, 0/0 bytes (error code: -1003 [10:-72000])
+Task <DF36FCF3-1DCC-4546-BF0C-120FD9BC6669>.<1> finished with error [-1003] Error Domain=NSURLErrorDomain Code=-1003 "A server with the specified hostname could not be found." UserInfo={_kCFStreamErrorCodeKey=-72000, NSUnderlyingError=0x600003be28b0 {Error Domain=kCFErrorDomainCFNetwork Code=-1003 "(null)" UserInfo={_kCFStreamErrorDomainKey=10, _kCFStreamErrorCodeKey=-72000, _NSURLErrorNWResolutionReportKey=Resolved 0 endpoints in 1ms using unknown from query, _NSURLErrorNWPathKey=satisfied (Path is satisfied), interface: en0[802.11], ipv4, ipv6, dns, flow divert agg: 2, uses wifi}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <DF36FCF3-1DCC-4546-BF0C-120FD9BC6669>.<1>, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <DF36FCF3-1DCC-4546-BF0C-120FD9BC6669>.<1>"
+), NSLocalizedDescription=A server with the specified hostname could not be found., NSErrorFailingURLStringKey=https://api.openweathermap.org/data/2.5/weather?lat=36.76714&lon=138.337&units=metric&appid=eb609907ba7c789a99b3d43444bf448f, NSErrorFailingURLKey=https://api.openweathermap.org/data/2.5/weather?lat=36.76714&lon=138.337&units=metric&appid=eb609907ba7c789a99b3d43444bf448f, _kCFStreamErrorDomainKey=10}
+Task <B2D61F5A-C80A-4BA9-938A-C6BF1862B202>.<2> finished with error [-1003] Error Domain=NSURLErrorDomain Code=-1003 "A server with the specified hostname could not be found." UserInfo={_kCFStreamErrorCodeKey=-72000, NSUnderlyingError=0x600003bfa5e0 {Error Domain=kCFErrorDomainCFNetwork Code=-1003 "(null)" UserInfo={_kCFStreamErrorDomainKey=10, _kCFStreamErrorCodeKey=-72000, _NSURLErrorNWResolutionReportKey=Resolved 0 endpoints in 0ms using unknown from query, _NSURLErrorNWPathKey=satisfied (Path is satisfied), interface: en0[802.11], ipv4, ipv6, dns, flow divert agg: 2, uses wifi}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <B2D61F5A-C80A-4BA9-938A-C6BF1862B202>.<2>, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <B2D61F5A-C80A-4BA9-938A-C6BF1862B202>.<2>"
+), NSLocalizedDescription=A server with the specified hostname could not be found., NSErrorFailingURLStringKey=https://api.openweathermap.org/data/2.5/weather?lat=36.78139&lon=138.39299&units=metric&appid=eb609907ba7c789a99b3d43444bf448f, NSErrorFailingURLKey=https://api.openweathermap.org/data/2.5/weather?lat=36.78139&lon=138.39299&units=metric&appid=eb609907ba7c789a99b3d43444bf448f, _kCFStreamErrorDomainKey=10}

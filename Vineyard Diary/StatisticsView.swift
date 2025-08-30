@@ -1,7 +1,7 @@
 import SwiftUI
 import Charts
 
-// ホバー中の選択点（全グラフで共通）
+// ホバー中の選択内容（1日付に複数行のシリーズを載せる）
 struct SelectedPoint: Identifiable, Equatable {
     let id = UUID()
     let date: Date
@@ -16,16 +16,20 @@ struct StatisticsView: View {
     @State private var selectedYear: Int = Calendar.current.component(.year, from: Date())
     @State private var selectedBlock: String = ""
 
-    // グラフごとのホバー選択状態
-    @State private var selTemp: SelectedPoint?
-    @State private var selSun: SelectedPoint?
-    @State private var selCumulTemp: SelectedPoint?
-    @State private var selCumulSunVar: SelectedPoint?
-
-    // バブルの表示位置（各グラフ用）
+    // 気温（同日2行＝最高/最低）
+    @State private var selTempItems: [SelectedPoint] = []
     @State private var posTemp: CGPoint?
+
+    // 日照（棒・単一）
+    @State private var selSun: SelectedPoint?
     @State private var posSun: CGPoint?
+
+    // 有効積算温度（単一）
+    @State private var selCumulTempItems: [SelectedPoint] = []
     @State private var posCumulTemp: CGPoint?
+
+    // 積算日照（品種別・同日複数行 ← 今回の修正点）
+    @State private var selCumulSunVarItems: [SelectedPoint] = []
     @State private var posCumulSunVar: CGPoint?
 
     // 「2,025」ではなく「2025」にするための整形
@@ -42,10 +46,10 @@ struct StatisticsView: View {
 
             ScrollView(.vertical) {
                 VStack(spacing: 28) {
-                    temperatureSection                 // 最高=赤 / 最低=青（ホバー）
-                    sunshineSection                    // 日照（棒）（ホバー）
-                    cumulativeTemperatureSection       // 有効積算温度（畑ごと1本）（ホバー）
-                    cumulativeSunshineVarietySection   // 積算日照（品種別）（ホバー）
+                    temperatureSection                 // 最高=赤 / 最低=青（ホバー同日2行）
+                    sunshineSection                    // 日照（棒）（ホバー単一）
+                    cumulativeTemperatureSection       // 有効積算温度（単一）
+                    cumulativeSunshineVarietySection   // 積算日照（品種別・ホバー同日複数行 ← 追加）
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
@@ -54,7 +58,6 @@ struct StatisticsView: View {
             .scrollIndicators(.visible)
         }
         .onAppear {
-            // 設定に無い区画は選ばせない
             let valid = Set(store.settings.blocks.map { $0.name })
             if selectedBlock.isEmpty || !valid.contains(selectedBlock) {
                 selectedBlock = store.settings.blocks.first?.name ?? ""
@@ -64,7 +67,7 @@ struct StatisticsView: View {
         .frame(minWidth: 980, minHeight: 700)
     }
 
-    // MARK: - Header
+    // MARK: Header
     private var header: some View {
         HStack(spacing: 12) {
             Text("\(nfNoGrouping.string(from: NSNumber(value: selectedYear)) ?? String(selectedYear))年 統計")
@@ -89,13 +92,13 @@ struct StatisticsView: View {
         .padding(.horizontal, 16)
     }
 
-    // MARK: - 型
+    // MARK: 型
     private enum SeriesKind { case tMax, tMin, sun }
     private struct Point: Identifiable { let id = UUID(); let date: Date; let value: Double? }
     private struct TempPoint: Identifiable { let id = UUID(); let date: Date; let value: Double; let series: String }
     private struct SeriesPoint: Identifiable { let id = UUID(); let date: Date; let value: Double?; let series: String }
 
-    // MARK: - 気温（最高/最低：色分け + ホバー）
+    // MARK: 気温（最高/最低：同一日付で2行表示）
     private var temperatureSection: some View {
         let data = tempPoints()
         return Group {
@@ -112,6 +115,17 @@ struct StatisticsView: View {
                     .interpolationMethod(.monotone)
                     .foregroundStyle(by: .value("系列", p.series))
                 }
+
+                if let first = selTempItems.first {
+                    RuleMark(x: .value("選択日", first.date))
+                        .foregroundStyle(.secondary.opacity(0.7))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4,4]))
+                    ForEach(selTempItems) { s in
+                        PointMark(x: .value("選択日", s.date),
+                                  y: .value("値", s.value))
+                        .foregroundStyle((s.series == "最高") ? .red : .blue)
+                    }
+                }
             }
             .chartForegroundStyleScale(["最高": .red, "最低": .blue])
             .chartLegend(position: .top, alignment: .leading)
@@ -122,24 +136,26 @@ struct StatisticsView: View {
                         .onContinuousHover { phase in
                             switch phase {
                             case .active(let loc):
-                                guard
-                                    let date = xToDate(loc.x, proxy: proxy, geo: geo),
-                                    let targetY = yToTempValue(loc.y, proxy: proxy, geo: geo)
-                                else { return }
-
-                                if let (d, v, s) = nearestTempPoint2D(toDate: date, targetY: targetY, in: data) {
-                                    selTemp = SelectedPoint(date: d, value: v, series: s)
-                                    posTemp = adjustBubblePoint(loc, in: geo[plot], bubbleWidth: 200, bubbleHeight: 34)
+                                guard let date = xToDate(loc.x, proxy: proxy, geo: geo) else { return }
+                                if let targetDate = nearestDate(to: date, in: data.map { $0.date }) {
+                                    let sameDay = data.filter { Calendar.current.isDate($0.date, inSameDayAs: targetDate) }
+                                    let items: [SelectedPoint] = sameDay.map { p in
+                                        SelectedPoint(date: p.date, value: p.value, series: p.series)
+                                    }
+                                    selTempItems = items.sorted { ($0.series ?? "") < ($1.series ?? "") }
+                                    posTemp = adjustBubblePoint(loc, in: geo[plot], bubbleWidth: 220, bubbleHeight: 48)
                                 }
                             case .ended:
-                                selTemp = nil
+                                selTempItems = []
                                 posTemp = nil
                             }
                         }
                         .overlay(alignment: .topLeading) {
-                            if let s = selTemp, let pt = posTemp {
-                                InfoBubble(date: s.date, value: s.value, series: s.series)
-                                    .position(x: pt.x, y: pt.y - 18)
+                            if !selTempItems.isEmpty, let pt = posTemp {
+                                InfoBubbleMulti(date: selTempItems[0].date, lines: selTempItems.map {
+                                    ($0.series ?? "", $0.value)
+                                })
+                                .position(x: pt.x, y: pt.y - 18)
                             }
                         }
                 }
@@ -159,7 +175,7 @@ struct StatisticsView: View {
         return pts
     }
 
-    // MARK: - 日照（棒 + ホバー）
+    // MARK: 日照（棒・単一）
     private var sunshineSection: some View {
         let pts = points(kind: .sun)
         return Group {
@@ -175,6 +191,15 @@ struct StatisticsView: View {
                             y: .value("日照(h)", v)
                         )
                     }
+                }
+
+                if let s = selSun {
+                    RuleMark(x: .value("選択日", s.date))
+                        .foregroundStyle(.secondary.opacity(0.7))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4,4]))
+                    PointMark(x: .value("選択日", s.date),
+                              y: .value("値", s.value))
+                    .foregroundStyle(.primary)
                 }
             }
             .chartOverlay { proxy in
@@ -207,7 +232,7 @@ struct StatisticsView: View {
         }
     }
 
-    // MARK: - 有効積算温度（畑ごと1本 + ホバー）
+    // MARK: 有効積算温度（単一）
     private var cumulativeTemperatureSection: some View {
         let pts = cumulativeActiveTempPoints()
         return Group {
@@ -225,6 +250,17 @@ struct StatisticsView: View {
                         .interpolationMethod(.monotone)
                     }
                 }
+
+                if let first = selCumulTempItems.first {
+                    RuleMark(x: .value("選択日", first.date))
+                        .foregroundStyle(.secondary.opacity(0.7))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4,4]))
+                    ForEach(selCumulTempItems) { s in
+                        PointMark(x: .value("選択日", s.date),
+                                  y: .value("値", s.value))
+                        .foregroundStyle(.primary)
+                    }
+                }
             }
             .chartOverlay { proxy in
                 GeometryReader { geo in
@@ -235,17 +271,18 @@ struct StatisticsView: View {
                             case .active(let loc):
                                 guard let date = xToDate(loc.x, proxy: proxy, geo: geo) else { return }
                                 if let (d, v) = nearestLinePoint(to: date, in: pts) {
-                                    selCumulTemp = SelectedPoint(date: d, value: v, series: nil)
+                                    selCumulTempItems = [SelectedPoint(date: d, value: v, series: nil)]
                                     posCumulTemp = adjustBubblePoint(loc, in: geo[plot], bubbleWidth: 200, bubbleHeight: 34)
                                 }
                             case .ended:
-                                selCumulTemp = nil
+                                selCumulTempItems = []
                                 posCumulTemp = nil
                             }
                         }
                         .overlay(alignment: .topLeading) {
-                            if let s = selCumulTemp, let pt = posCumulTemp {
-                                InfoBubble(date: s.date, value: s.value, series: s.series)
+                            if !selCumulTempItems.isEmpty, let pt = posCumulTemp {
+                                InfoBubbleMulti(date: selCumulTempItems[0].date,
+                                                lines: selCumulTempItems.map { ($0.series ?? "積算温度", $0.value) })
                                     .position(x: pt.x, y: pt.y - 18)
                             }
                         }
@@ -271,7 +308,7 @@ struct StatisticsView: View {
         return pts
     }
 
-    // MARK: - 積算日照（品種別 + ホバー）
+    // MARK: 積算日照（品種別・ホバー同日複数行 ← ここを強化）
     private var cumulativeSunshineVarietySection: some View {
         let all = cumulativeSunshineVarietyPoints()
         return Group {
@@ -290,6 +327,17 @@ struct StatisticsView: View {
                         .foregroundStyle(by: .value("品種", p.series))
                     }
                 }
+
+                if let first = selCumulSunVarItems.first {
+                    RuleMark(x: .value("選択日", first.date))
+                        .foregroundStyle(.secondary.opacity(0.7))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4,4]))
+                    ForEach(selCumulSunVarItems) { s in
+                        PointMark(x: .value("選択日", s.date),
+                                  y: .value("値", s.value))
+                        .foregroundStyle(.primary)
+                    }
+                }
             }
             .chartLegend(position: .top, alignment: .leading)
             .chartOverlay { proxy in
@@ -300,18 +348,28 @@ struct StatisticsView: View {
                             switch phase {
                             case .active(let loc):
                                 guard let date = xToDate(loc.x, proxy: proxy, geo: geo) else { return }
-                                if let (d, v, s) = nearestSeriesPoint(to: date, in: all) {
-                                    selCumulSunVar = SelectedPoint(date: d, value: v, series: s)
-                                    posCumulSunVar = adjustBubblePoint(loc, in: geo[plot], bubbleWidth: 220, bubbleHeight: 34)
+                                // 近い日付を特定 → その日の全品種のポイントをまとめてバブル化
+                                if let targetDate = nearestDate(to: date, in: all.map { $0.date }) {
+                                    let sameDay = all.filter {
+                                        Calendar.current.isDate($0.date, inSameDayAs: targetDate) && $0.value != nil
+                                    }
+                                    let items: [SelectedPoint] = sameDay.compactMap { p in
+                                        guard let v = p.value else { return nil }
+                                        return SelectedPoint(date: p.date, value: v, series: p.series)
+                                    }
+                                    // 表示順：品種名昇順
+                                    selCumulSunVarItems = items.sorted { ($0.series ?? "") < ($1.series ?? "") }
+                                    posCumulSunVar = adjustBubblePoint(loc, in: geo[plot], bubbleWidth: 240, bubbleHeight: CGFloat(32 + 14 * max(items.count-1, 0)))
                                 }
                             case .ended:
-                                selCumulSunVar = nil
+                                selCumulSunVarItems = []
                                 posCumulSunVar = nil
                             }
                         }
                         .overlay(alignment: .topLeading) {
-                            if let s = selCumulSunVar, let pt = posCumulSunVar {
-                                InfoBubble(date: s.date, value: s.value, series: s.series)
+                            if !selCumulSunVarItems.isEmpty, let pt = posCumulSunVar {
+                                InfoBubbleMulti(date: selCumulSunVarItems[0].date,
+                                                lines: selCumulSunVarItems.map { ($0.series ?? "", $0.value) })
                                     .position(x: pt.x, y: pt.y - 18)
                             }
                         }
@@ -324,7 +382,7 @@ struct StatisticsView: View {
 
     // —— ここから下は StatisticsView の内部に必ず置いてください ——
 
-    // 品種別の積算日照ポイント
+    // 品種別の積算日照ポイント（満開日以降を累積）
     private func cumulativeSunshineVarietyPoints() -> [SeriesPoint] {
         let seq = daySequence()
         guard !seq.isEmpty else { return [] }
@@ -413,7 +471,7 @@ struct StatisticsView: View {
         return Array(set).sorted()
     }
 
-    // MARK: - ホバー座標→日付・温度、バブル位置の調整、最近傍点探索
+    // MARK: ユーティリティ（ホバー座標→日付・温度、バブル調整、近傍）
     private func xToDate(_ x: CGFloat, proxy: ChartProxy, geo: GeometryProxy) -> Date? {
         let plot = proxy.plotAreaFrame
         let relX = x - geo[plot].origin.x
@@ -421,7 +479,7 @@ struct StatisticsView: View {
         return proxy.value(atX: pxX) as Date?
     }
 
-    // 温度用：Y座標→値(Double)を逆算
+    // 温度用：Y座標→値(Double)を逆算（気温グラフで使用）
     private func yToTempValue(_ y: CGFloat, proxy: ChartProxy, geo: GeometryProxy) -> Double? {
         let plot = proxy.plotAreaFrame
         let relY = y - geo[plot].origin.y
@@ -435,33 +493,18 @@ struct StatisticsView: View {
                                    margin: CGFloat = 8) -> CGPoint {
         let halfW = bubbleWidth / 2
         let halfH = bubbleHeight / 2
-
         let minX = rect.minX + halfW + margin
         let maxX = rect.maxX - halfW - margin
         let minY = rect.minY + halfH + margin
         let maxY = rect.maxY - halfH - margin
-
         let x = min(max(loc.x, minX), maxX)
         let y = min(max(loc.y, minY), maxY)
-
         return CGPoint(x: x, y: y)
     }
 
-    // 2D最近傍（同一日なら Y により「最高/最低」を正しく選ぶ）
-    private func nearestTempPoint2D(
-        toDate date: Date,
-        targetY: Double,
-        in data: [TempPoint]
-    ) -> (Date, Double, String)? {
-        guard !data.isEmpty else { return nil }
-        let byDate = data.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }!
-        let sameDay = data.filter { Calendar.current.isDate($0.date, inSameDayAs: byDate.date) }
-        if sameDay.count >= 2 {
-            let bestY = sameDay.min { abs($0.value - targetY) < abs($1.value - targetY) }!
-            return (bestY.date, bestY.value, bestY.series)
-        } else {
-            return (byDate.date, byDate.value, byDate.series)
-        }
+    private func nearestDate(to date: Date, in dates: [Date]) -> Date? {
+        guard !dates.isEmpty else { return nil }
+        return dates.min { abs($0.timeIntervalSince(date)) < abs($1.timeIntervalSince(date)) }
     }
 
     private func nearestBarPoint(to date: Date, in pts: [Point]) -> (Date, Double)? {
@@ -495,7 +538,7 @@ struct StatisticsView: View {
     }
 }
 
-// MARK: - フロートUI（ホバーで表示）
+// MARK: - フロートUI（単一行）
 private struct InfoBubble: View {
     let date: Date
     let value: Double
@@ -522,6 +565,39 @@ private struct InfoBubble: View {
         .padding(.vertical, 6)
         .background(.ultraThinMaterial)
         .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+    }
+}
+
+// MARK: - フロートUI（複数行：同一日付の複数シリーズ）
+private struct InfoBubbleMulti: View {
+    let date: Date
+    let lines: [(String, Double)] // (シリーズ名, 値)
+
+    private var dateStr: String {
+        let df = DateFormatter()
+        df.calendar = Calendar(identifier: .gregorian)
+        df.locale = Locale(identifier: "ja_JP")
+        df.dateFormat = "yyyy/MM/dd"
+        return df.string(from: date)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(dateStr).font(.caption).foregroundStyle(.secondary)
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, item in
+                HStack(spacing: 6) {
+                    Text(item.0.isEmpty ? "値" : item.0)
+                        .font(.caption).bold()
+                    Text(String(format: "%.2f", item.1))
+                        .font(.caption)
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
     }
 }

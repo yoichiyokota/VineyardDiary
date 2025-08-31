@@ -104,4 +104,6 @@ struct DiaryEntry: Identifiable, Codable, Hashable {
     var weatherMin: Double? = nil
     var weatherMax: Double? = nil
     var sunshineHours: Double? = nil
+    var precipitationMm: Double? = nil
 }
+

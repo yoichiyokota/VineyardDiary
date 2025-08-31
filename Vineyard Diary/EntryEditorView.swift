@@ -56,7 +56,6 @@ struct EntryEditorView: View {
                 .padding(.trailing, 8)
 
                 if let img = previewImage {
-                    // 画像を大きく表示（等倍が大きい場合は縮小表示）
                     GeometryReader { geo in
                         let maxW = geo.size.width - 32
                         let maxH = geo.size.height - 32
@@ -88,7 +87,11 @@ struct EntryEditorView: View {
     
     // MARK: - Sections
     private var dateAndWeather: some View {
-        Grid(horizontalSpacing: 6, verticalSpacing: 10) {
+        // 当日/区画のキャッシュ済み気象をローカル取得（dw 未定義エラー対策）
+        let day = Calendar.current.startOfDay(for: working.date)
+        let dw = weather.get(block: working.block, date: day)
+
+        return Grid(horizontalSpacing: 6, verticalSpacing: 10) {
             GridRow {
                 Text("日付").frame(width: labelWidth, alignment: .leading)
                 DatePicker("", selection: $working.date, displayedComponents: .date)
@@ -98,7 +101,9 @@ struct EntryEditorView: View {
             GridRow {
                 Text("").frame(width: labelWidth)
                 Group {
-                    if let min = working.weatherMin, let max = working.weatherMax {
+                    if let tmin = dw?.tMin, let tmax = dw?.tMax {
+                        Text("気温: 最低 \(tmin, specifier: "%.1f")℃ / 最高 \(tmax, specifier: "%.1f")℃")
+                    } else if let min = working.weatherMin, let max = working.weatherMax {
                         Text("気温: 最低 \(min, specifier: "%.1f")℃ / 最高 \(max, specifier: "%.1f")℃")
                     } else {
                         Text("気温: 未取得（保存時に取得）")
@@ -110,10 +115,25 @@ struct EntryEditorView: View {
             GridRow {
                 Text("").frame(width: labelWidth)
                 Group {
-                    if let sun = working.sunshineHours {
+                    if let sun = dw?.sunshineHours {
+                        Text("日照時間: \(sun, specifier: "%.1f") h")
+                    } else if let sun = working.sunshineHours {
                         Text("日照時間: \(sun, specifier: "%.1f") h")
                     } else {
                         Text("日照時間: 未取得（保存時に取得）")
+                    }
+                }
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            // 降水量（mm/日）
+            GridRow {
+                Text("").frame(width: labelWidth)
+                Group {
+                    if let rain = dw?.precipitationMm {
+                        Text("降水量: \(rain, specifier: "%.1f") mm")
+                    } else {
+                        Text("降水量: 未取得（保存時に取得）")
                     }
                 }
                 .foregroundStyle(.secondary)
@@ -239,8 +259,6 @@ struct EntryEditorView: View {
         }
     }
     
-
-    
     private var workNotesEditors: some View {
         Grid {
             GridRow {
@@ -309,7 +327,6 @@ struct EntryEditorView: View {
             GridRow {
                 Text("写真").frame(width: labelWidth, alignment: .leading)
                 HStack(spacing: 12) {
-                    // ---- Photosアプリから選択（macOS 13+）----
                     if #available(macOS 13.0, *) {
                         PhotosPicker(
                             selection: $selectedPhotos,
@@ -319,16 +336,13 @@ struct EntryEditorView: View {
                         ) {
                             Label("写真を追加（写真App）", systemImage: "photo.on.rectangle.angled")
                         }
-                        // ここが呼ばれたら即インポート
                         .onChange(of: selectedPhotos) { items in
                             importPhotos(items: items)
                         }
                     }
-                    
-                    // ---- フォールバック：ファイルから追加（常に表示）----
                     Button {
                         let panel = NSOpenPanel()
-                        panel.allowedContentTypes = [.image]   // macOS 12+ の推奨API
+                        panel.allowedContentTypes = [.image]
                         panel.allowsMultipleSelection = true
                         panel.canChooseDirectories = false
                         if panel.runModal() == .OK {
@@ -348,13 +362,11 @@ struct EntryEditorView: View {
                     } label: {
                         Label("ファイルから追加", systemImage: "folder.badge.plus")
                     }
-                    
                     Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             
-            // サムネイル帯
             if !working.photos.isEmpty {
                 GridRow {
                     Text("").frame(width: labelWidth)
@@ -450,19 +462,23 @@ struct EntryEditorView: View {
             store.entries[idx].weatherMin = w.tMin
             store.entries[idx].weatherMax = w.tMax
             store.entries[idx].sunshineHours = w.sunshineHours
+            // DiaryEntry に降水を保持している場合のみ下を有効化
+            store.entries[idx].precipitationMm = w.precipitationMm
         }
     }
     
     private func closeWindow() {
-        NSApp.keyWindow?.performClose(nil)
+        if let win = NSApp.keyWindow {
+            win.close()
+        } else {
+            NSApp.keyWindow?.performClose(nil)
+        }
     }
     
     // PhotosPicker からの取り込み（Documents へ保存 → working.photos に追記）
-    // これで丸ごと置換してください
     private func importPhotos(items: [PhotosPickerItem]) {
         Task {
             for item in items {
-                // 画像データとして直接取得（推奨、macOS 13+）
                 if let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty {
                     let name = "photo_\(UUID().uuidString).jpg"
                     let url  = URL.documentsDirectory.appendingPathComponent(name)
@@ -473,7 +489,6 @@ struct EntryEditorView: View {
                         print("write photo failed:", error)
                     }
                 } else {
-                    // 取得できなかった場合でもアプリが落ちないようログのみ
                     print("PhotosPicker: transferable Data を取得できませんでした")
                 }
             }
@@ -481,16 +496,17 @@ struct EntryEditorView: View {
         }
     }
 }
+
 // サムネイルビュー
 private struct PhotoThumb: View {
     let name: String
     let size: CGSize
-    var onTap: () -> Void = {}          // ← 追加
+    var onTap: () -> Void = {}
     let onDelete: () -> Void
 
     var body: some View {
         VStack(spacing: 4) {
-            Button(action: onTap) {     // ← 画像をボタン化してプレビュー起動
+            Button(action: onTap) {
                 if let img = loadImage() {
                     Image(nsImage: img)
                         .resizable()

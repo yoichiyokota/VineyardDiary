@@ -28,8 +28,9 @@ final class DiaryStore: ObservableObject {
         }
     }
 
-    func deleteEntry(at offsets: IndexSet) {
-        entries.remove(atOffsets: offsets)
+    // DiaryStore.swift の中（@MainActor class DiaryStore 内）
+    func removeEntry(_ entry: DiaryEntry) {
+        entries.removeAll { $0.id == entry.id }
         save()
     }
 
@@ -166,6 +167,7 @@ final class DiaryStore: ObservableObject {
                     entries[i].weatherMin = w.tMin
                     entries[i].weatherMax = w.tMax
                     entries[i].sunshineHours = w.sunshineHours
+                    entries[i].precipitationMm = w.precipitationMm
                     changed = true
                 }
             }

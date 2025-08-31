@@ -19,7 +19,7 @@ struct SettingsRootView: View {
     }
 }
 
-// MARK: - 畑（行ごとに削除ボタン）
+// MARK: - 畑設定（緯度・経度をDMS形式で表示／編集）
 private struct BlocksPane: View {
     @EnvironmentObject var store: DiaryStore
 
@@ -44,22 +44,23 @@ private struct BlocksPane: View {
                                 store.settings.blocks.remove(at: i)
                                 store.saveSettings()
                             }
-                        } label: {
-                            Image(systemName: "minus.circle")
-                        }
+                        } label: { Image(systemName: "minus.circle") }
                         .buttonStyle(.borderless)
                     }
                 }
-                TableColumn("緯度") { b in
-                    TextField("緯度", text: bindingForLatString(b))
+
+                TableColumn("緯度（DMS）") { b in
+                    DMSInputField(value: bindingForLat(b), isLat: true, placeholder: "36°46'01.7\"N")
                 }
-                TableColumn("経度") { b in
-                    TextField("経度", text: bindingForLonString(b))
+
+                TableColumn("経度（DMS）") { b in
+                    DMSInputField(value: bindingForLon(b), isLat: false, placeholder: "138°20'13.2\"E")
                 }
             }
         }
     }
 
+    // MARK: - バインディング生成
     private func index(of b: BlockSetting) -> Int? {
         store.settings.blocks.firstIndex(where: { $0.id == b.id })
     }
@@ -68,29 +69,40 @@ private struct BlocksPane: View {
         Binding(
             get: { b.name },
             set: { new in
-                if let i = index(of: b) { store.settings.blocks[i].name = new; store.saveSettings() }
+                if let i = index(of: b) {
+                    store.settings.blocks[i].name = new
+                    store.saveSettings()
+                }
             }
         )
     }
-    private func bindingForLatString(_ b: BlockSetting) -> Binding<String> {
+
+    private func bindingForLat(_ b: BlockSetting) -> Binding<Double?> {
         Binding(
-            get: { b.latitude.map { String($0) } ?? "" },
+            get: { b.latitude },
             set: { new in
-                if let i = index(of: b) { store.settings.blocks[i].latitude = Double(new); store.saveSettings() }
+                if let i = index(of: b) {
+                    store.settings.blocks[i].latitude = new
+                    store.saveSettings()
+                }
             }
         )
     }
-    private func bindingForLonString(_ b: BlockSetting) -> Binding<String> {
+
+    private func bindingForLon(_ b: BlockSetting) -> Binding<Double?> {
         Binding(
-            get: { b.longitude.map { String($0) } ?? "" },
+            get: { b.longitude },
             set: { new in
-                if let i = index(of: b) { store.settings.blocks[i].longitude = Double(new); store.saveSettings() }
+                if let i = index(of: b) {
+                    store.settings.blocks[i].longitude = new
+                    store.saveSettings()
+                }
             }
         )
     }
 }
 
-// MARK: - 品種
+// MARK: - 品種設定（従来どおり）
 private struct VarietiesPane: View {
     @EnvironmentObject var store: DiaryStore
 
@@ -133,5 +145,48 @@ private struct VarietiesPane: View {
                 }
             }
         )
+    }
+}
+
+// MARK: - DMS入力フィールド（Double? <-> DMS文字列）
+private struct DMSInputField: View {
+    @Binding var value: Double?
+    let isLat: Bool
+    var placeholder: String
+
+    @State private var text: String = ""
+
+    var body: some View {
+        TextField(placeholder, text: $text, onCommit: commit)
+            .textFieldStyle(.roundedBorder)
+            .onAppear { syncFromModel() }
+            .onChange(of: value) { _ in syncFromModel() }
+            .onSubmit { commit() }
+            .frame(maxWidth: .infinity)
+            .help(isLat
+                  ? "緯度（N/S）。例: 36°46'01.7\"N"
+                  : "経度（E/W）。例: 138°20'13.2\"E")
+    }
+
+    private func syncFromModel() {
+        if let v = value {
+            text = ddToDMS(v, isLat: isLat)   // ← DMS.swift の関数を利用
+        } else {
+            text = ""
+        }
+    }
+
+    private func commit() {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            value = nil
+            return
+        }
+        if let dd = dmsToDD(trimmed, isLat: isLat) { // ← DMS.swift の関数を利用
+            value = dd
+            text = ddToDMS(dd, isLat: isLat)        // 正規化して表示
+        } else {
+            NSSound.beep() // 入力が解釈できない場合
+        }
     }
 }

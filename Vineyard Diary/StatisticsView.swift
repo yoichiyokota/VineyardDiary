@@ -26,6 +26,9 @@ struct StatisticsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
+                .onChange(of: store.settings.blocks) { _ in
+                    initialSelects()
+                }
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     tempsSection()              // 1) 最高・最低（赤/青、中央値なし）
@@ -74,7 +77,7 @@ struct StatisticsView: View {
 
     // MARK: - Sections
 
-    // 1) 最高・最低気温（赤/青）※中間線は描かない（各LineMarkに直接色を指定）
+    // 1) 最高・最低気温（赤/青）
     private func tempsSection() -> some View {
         let maxPts = tempMaxPoints()
         let minPts = tempMinPoints()
@@ -397,19 +400,25 @@ struct StatisticsView: View {
 
     private func initialSelects() {
         let blocks = availableBlocks()
-        if selectedBlock.isEmpty {
+        if selectedBlock.isEmpty || !blocks.contains(selectedBlock) {
+            // 設定順に並んだ available から先頭を採用
             selectedBlock = blocks.first ?? (store.settings.blocks.first?.name ?? "")
         }
-        if !availableYears().contains(selectedYear) {
-            selectedYear = availableYears().max() ?? Calendar.current.component(.year, from: Date())
+        let years = availableYears()
+        if !years.contains(selectedYear) {
+            selectedYear = years.max() ?? Calendar.current.component(.year, from: Date())
         }
     }
 
+    //private func availableBlocks() -> [String] {
+    //    // 設定に存在かつ天気データにもある区画のみ
+    //    let defined = Set(store.settings.blocks.map { $0.name })
+    //    let fromWeather = Set(weather.data.keys)
+    //    return Array(defined.intersection(fromWeather)).sorted()
+    //}
+    
     private func availableBlocks() -> [String] {
-        // 設定に存在かつ天気データにもある区画のみ
-        let defined = Set(store.settings.blocks.map { $0.name })
-        let fromWeather = Set(weather.data.keys)
-        return Array(defined.intersection(fromWeather)).sorted()
+        store.settings.blocks.map { $0.name }   // ← 並び順そのまま
     }
 
     private func availableYears() -> [Int] {

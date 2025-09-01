@@ -34,6 +34,10 @@ final class DiaryStore: ObservableObject {
         save()
     }
 
+    func sortEntriesIfNeeded() {
+        // 必要ならアプリ設定に応じて変更してください（ここでは日付の新しい順）
+        entries.sort { $0.date > $1.date }
+    }
     // MARK: - 永続化
     func save() {
         do {
@@ -45,13 +49,78 @@ final class DiaryStore: ObservableObject {
         }
     }
 
+ //   func load() {
+ //       do {
+ //           let raw = try Data(contentsOf: entriesURL)
+ //           let dec = JSONDecoder()
+ //           self.entries = try dec.decode([DiaryEntry].self, from: raw)
+ //       } catch {
+ //           self.entries = []
+ //       }
+ //   }
     func load() {
+        let url = entriesURL  // あなたの既存の保存先 (例: URL.documentsDirectory.appendingPathComponent("entries.json"))
         do {
-            let raw = try Data(contentsOf: entriesURL)
+            let data = try Data(contentsOf: url)
             let dec = JSONDecoder()
-            self.entries = try dec.decode([DiaryEntry].self, from: raw)
+            // まずは現行 DiaryEntry で読み込み（photoCaptions を decodeIfPresent している前提）
+            let current = try dec.decode([DiaryEntry].self, from: data)
+            self.entries = current
+            self.sortEntriesIfNeeded()
+            print("✅ entries loaded:", current.count)
         } catch {
-            self.entries = []
+            // 失敗したらレガシーフォールバック（photoCaptions が無い古い形式）
+            print("⚠️ decode as DiaryEntry failed, trying legacy. error:", error)
+            do {
+                struct LegacyEntry: Codable {
+                    var id: UUID?
+                    var date: Date
+                    var block: String
+                    var varieties: [VarietyStageItem]?
+                    var isSpraying: Bool?
+                    var sprayTotalLiters: String?
+                    var sprays: [SprayItem]?
+                    var workNotes: String?
+                    var memo: String?
+                    var workTimes: [WorkTime]?
+                    var volunteers: [String]?
+                    var photos: [String]?
+                    var weatherMin: Double?
+                    var weatherMax: Double?
+                    var sunshineHours: Double?
+                    var precipitationMm: Double?
+                }
+                let dec = JSONDecoder()
+                let legacy = try dec.decode([LegacyEntry].self, from: Data(contentsOf: url))
+                let migrated: [DiaryEntry] = legacy.map { le in
+                    DiaryEntry(
+                        id: le.id ?? UUID(),
+                        date: le.date,
+                        block: le.block,
+                        varieties: le.varieties ?? [],
+                        isSpraying: le.isSpraying ?? false,
+                        sprayTotalLiters: le.sprayTotalLiters ?? "",
+                        sprays: le.sprays ?? [],
+                        workNotes: le.workNotes ?? "",
+                        memo: le.memo ?? "",
+                        workTimes: le.workTimes ?? [],
+                        volunteers: le.volunteers ?? [],
+                        photos: le.photos ?? [],
+                        photoCaptions: [:], // 旧データには無いので空で初期化
+                        weatherMin: le.weatherMin,
+                        weatherMax: le.weatherMax,
+                        sunshineHours: le.sunshineHours,
+                        precipitationMm: le.precipitationMm
+                    )
+                }
+                self.entries = migrated
+                self.sortEntriesIfNeeded()
+                self.save() // 現行形式で書き戻し
+                print("✅ legacy migrated:", migrated.count)
+            } catch {
+                print("❌ failed to load entries (both current & legacy). error:", error)
+                self.entries = []
+            }
         }
     }
 

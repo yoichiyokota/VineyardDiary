@@ -54,7 +54,7 @@ struct VineyardDiaryApp: App {
                 Button("CSVエクスポート") {
                     Task { @MainActor in
                         do {
-                            let url = try CSVExporter.exportWithPanel(entries: store.entries)
+                            let url = try CSVExporter.saveWithPanelFlatteningNewlines(entries: store.entries)
                             print("✅ CSV保存:", url.path)
                         } catch { print("❌ CSV失敗:", error) }
                     }

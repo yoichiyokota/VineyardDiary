@@ -1,10 +1,27 @@
 import SwiftUI
 
+private extension DateFormatter {
+    static let vdDay: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.calendar = Calendar(identifier: .gregorian)
+        f.dateFormat = "yyyy/MM/dd (E)"   // 例: 2025/09/01 (月)
+        return f
+    }()
+}
+
 struct EntryRow: View {
     let entry: DiaryEntry
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            // 復活: 日付ヘッダー（太字）
+            Text(DateFormatter.vdDay.string(from: entry.date))
+                   .font(.headline)
+            Text("区画: \(entry.block.isEmpty ? "未選択" : entry.block)")
+                .font(.body)                  // ← 他と同じサイズに変更
+                .foregroundStyle(.primary)    // ← 標準テキストカラーに変更
+                .padding(.vertical, 2)        // ← 行間をそろえるために軽く余白を追加（任意）
             // 品種
             LabeledLine(title: "品種", text: varietiesText())
             
@@ -57,23 +74,26 @@ struct EntryRow: View {
     }
 
     private func sprayText() -> String {
-        // 例：「使用L: 200 / 薬剤: ボルドー(1000), スコア(2000)」
+        // 例：「液量: 200L / 薬剤: ボルドー(1000倍)・スコア(2000倍)」
         let liters = entry.sprayTotalLiters.trimmingCharacters(in: .whitespacesAndNewlines)
-        let litersPart = liters.isEmpty ? "" : "使用L: \(liters)"
+        let litersPart = liters.isEmpty ? "" : "液量: \(liters)L"
+
         let chems = entry.sprays
-            .map { s in
+            .map { s -> String in
                 let name = s.chemicalName.trimmingCharacters(in: .whitespacesAndNewlines)
                 let d    = s.dilution.trimmingCharacters(in: .whitespacesAndNewlines)
                 switch (name.isEmpty, d.isEmpty) {
-                case (false, false): return "\(name)(\(d))"
+                case (false, false): return "\(name)(\(d)倍)"  // ← 倍表記
                 case (false, true):  return "\(name)"
-                case (true,  false): return "倍率\(d)"
+                case (true,  false): return "\(d)倍"          // 名前なしなら倍率のみ（必要なければ "" に）
                 default:             return ""
                 }
             }
             .filter { !$0.isEmpty }
-            .joined(separator: ", ")
+            .joined(separator: "・") // カンマにしたい場合は ", " に
+
         let chemPart = chems.isEmpty ? "" : "薬剤: \(chems)"
+
         return [litersPart, chemPart]
             .filter { !$0.isEmpty }
             .joined(separator: " / ")

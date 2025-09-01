@@ -2,8 +2,6 @@ import Foundation
 import AppKit
 import UniformTypeIdentifiers
 
-// 既存の BackupPayload / BackupManager を拡張。
-// ここでは「保存先/復元ファイルをユーザーに選ばせる」UI付きメソッドを提供します。
 extension BackupManager {
 
     /// ファイル保存ダイアログを出してバックアップを書き出します（JSON, 拡張子 .vydbackup）
@@ -16,9 +14,10 @@ extension BackupManager {
 
         let savePanel = NSSavePanel()
         savePanel.title = "バックアップを保存"
-        savePanel.nameFieldStringValue = "VineyardDiary_Backup.vydbackup"
+        // 拡張子はここでは付けない！
+        savePanel.nameFieldStringValue = "VineyardDiary_Backup"
 
-        // .vydbackup を UTType として扱う（不明ならデータとして許可）
+        // .vydbackup を UTType として扱う
         if let custom = UTType(filenameExtension: "vydbackup") {
             savePanel.allowedContentTypes = [custom]
         } else {
@@ -29,7 +28,7 @@ extension BackupManager {
             throw CocoaError(.userCancelled)
         }
 
-        // 既存のバックアップフォーマット（BackupPayload）でJSON化して保存
+        // バックアップデータをJSONで保存
         let payload = BackupPayload(settings: settings, entries: entries, dailyWeather: dailyWeather)
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -39,7 +38,7 @@ extension BackupManager {
         return url
     }
 
-    /// ファイルを選んでバックアップから復元します（読み取りのみ・適用は呼び出し側で）
+    /// ファイルを選んでバックアップから復元します
     @MainActor
     static func importBackupWithPanel() throws -> BackupPayload {
         let open = NSOpenPanel()

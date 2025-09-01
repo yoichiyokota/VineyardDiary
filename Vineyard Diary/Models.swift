@@ -98,12 +98,21 @@ struct DiaryEntry: Identifiable, Codable, Hashable {
     var memo: String = ""                      // 備考
     var workTimes: [WorkTime] = []             // 作業時間帯(複数)
     var volunteers: [String] = []              // ボランティア氏名
-    var photos: [String] = []                  // ← 追加（ファイル名配列）
+    var photos: [String] = []                  // ファイル名配列
+    var photoCaptions: [String: String] = [:]  //写真キャプション（キー＝ファイル名）
 
     // 気象
     var weatherMin: Double? = nil
     var weatherMax: Double? = nil
     var sunshineHours: Double? = nil
     var precipitationMm: Double? = nil
+    
+    // 互換性確保：旧データに photoCaptions が無くても読み込めるように
+       enum CodingKeys: String, CodingKey {
+           case id, date, block, varieties, isSpraying, sprayTotalLiters, sprays,
+                workNotes, memo, workTimes, volunteers, photos, photoCaptions,
+                weatherMin, weatherMax, sunshineHours, precipitationMm
+       }
+
 }
 

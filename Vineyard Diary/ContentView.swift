@@ -9,16 +9,22 @@ struct ContentView: View {
     @State private var sortAscending = false
     @State private var searchText = ""
     @State private var confirmDelete: DiaryEntry?
-    // ① 追加：一覧サムネイル用の軽量キャッシュ
+
     @StateObject private var thumbs = ThumbnailStore()
 
-    // 生成したウインドウを保持（ARCで消えないように）
     @State private var editorWindows: [NSWindow] = []
     @State private var statsWindows:  [NSWindow] = []
+
+    // === 年 × 区画 フィルタ ===
+    @State private var selectedYear: Int = 0          // 0=すべて（初期は後で当年に寄せる）
+    @State private var selectedBlock: String = ""     // ""=すべて
+    @State private var availableYears: [Int] = []     // 降順
+    @State private var blockOptions: [String] = []    // 先頭 "" = すべて。以降は設定順→出現順
 
     var body: some View {
         VStack(spacing: 8) {
             headerBar
+
             if store.entries.isEmpty {
                 VStack(spacing: 8) {
                     Text("日記データが見つかりません")
@@ -26,13 +32,12 @@ struct ContentView: View {
                     Text("設定や保存先の変更、データの互換性で読み込みに失敗している可能性があります。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Button("再読み込み") {
-                        store.load()
-                    }
-                    .buttonStyle(.bordered)
+                    Button("再読み込み") { store.load() }
+                        .buttonStyle(.bordered)
                 }
                 .padding()
             }
+
             List {
                 ForEach(filteredAndSorted()) { entry in
                     Button {
@@ -61,8 +66,13 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12)
         .padding(.top, 8)
-        
-        // ContentView の body の最後でチェーン（.toolbar の後など、どこでもOK）
+        .onAppear {
+            rebuildYearAndBlockOptions()
+            // 既定：当年（データが無ければ 0=すべてのまま）
+            if selectedYear == 0, let first = availableYears.first {
+                selectedYear = first
+            }
+        }
         .confirmationDialog(
             "この日記を削除しますか？",
             isPresented: Binding(
@@ -89,6 +99,36 @@ struct ContentView: View {
                 Label("日記を追加", systemImage: "plus.circle.fill")
             }
 
+            // 年セレクタ（表示は 4桁+「年」、カンマ無し）
+            HStack(spacing: 6) {
+                Text("年")
+                Picker("", selection: $selectedYear) {
+                    if availableYears.isEmpty {
+                        Text("—").tag(0)
+                    } else {
+                        ForEach(availableYears, id: \.self) { y in
+                            Text(yearTitle(y)).tag(y)
+                        }
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .fixedSize()
+            }
+
+            // 区画セレクタ（先頭は必ず「すべて」）
+            HStack(spacing: 6) {
+                Text("区画")
+                Picker("", selection: $selectedBlock) {
+                    ForEach(blockOptions, id: \.self) { b in
+                        Text(b.isEmpty ? "すべて" : b).tag(b)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .fixedSize() 
+            }
+
             Picker("並び", selection: $sortAscending) {
                 Text("日付 降順（新しい順）").tag(false)
                 Text("日付 昇順（古い順）").tag(true)
@@ -98,24 +138,20 @@ struct ContentView: View {
 
             Spacer()
 
-            Button {
-                openStatisticsWindow()
-            } label: {
+            Button { openStatisticsWindow() } label: {
                 Label("統計", systemImage: "chart.xyaxis.line")
             }
         }
     }
 
-    // MARK: - Row
+    // MARK: - 行表示
     private func listRow(_ entry: DiaryEntry) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            // サムネイルは現状通り残す
             thumb(for: entry)
                 .frame(width: 72, height: 54)
                 .background(Color.gray.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            // ここを EntryRow に差し替える
             EntryRow(entry: entry)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -131,12 +167,11 @@ struct ContentView: View {
                 }
             }
             .frame(minWidth: 160, alignment: .trailing)
-            // 🗑️ ゴミ箱（追加）
+
             Button {
                 confirmDelete = entry
             } label: {
-                Image(systemName: "trash")
-                    .foregroundColor(.secondary)
+                Image(systemName: "trash").foregroundColor(.secondary)
             }
             .buttonStyle(.borderless)
             .help("この日記を削除")
@@ -144,8 +179,8 @@ struct ContentView: View {
         .padding(.vertical, 6)
         .contentShape(Rectangle())
     }
-    
-    // MARK: - Labels
+
+    // MARK: - ラベル（既存）
     private func tempLabel(for entry: DiaryEntry) -> String? {
         let day = Calendar.current.startOfDay(for: entry.date)
         if let w = weather.get(block: entry.block, date: day),
@@ -171,34 +206,112 @@ struct ContentView: View {
         return nil
     }
 
-    // MARK: - Filtering / Sorting
+    // MARK: - フィルタ & 並び
     private func filteredAndSorted() -> [DiaryEntry] {
-        let base = store.entries.filter { e in
-            if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
-            let q = searchText.lowercased()
-            return e.block.lowercased().contains(q)
-                || e.workNotes.lowercased().contains(q)
-                || e.memo.lowercased().contains(q)
+        // 年＆区画
+        let yearBlockFiltered = store.entries.filter { e in
+            yearMatches(e) && blockMatches(e)
         }
-        let s = base.sorted { $0.date < $1.date }
+
+        // 検索
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let searched = q.isEmpty ? yearBlockFiltered : yearBlockFiltered.filter { e in
+            e.block.lowercased().contains(q)
+            || e.workNotes.lowercased().contains(q)
+            || e.memo.lowercased().contains(q)
+        }
+
+        // 並び
+        let s = searched.sorted { $0.date < $1.date }
         return sortAscending ? s : s.reversed()
     }
 
-    // MARK: - Delete
-    private func onListSwipeDelete(_ offsets: IndexSet) {
-        let arr = filteredAndSorted()
-        for idx in offsets {
-            store.removeEntry(arr[idx])
-        }
-    }
-    private func deleteRow(_ entry: DiaryEntry) {
-        store.removeEntry(entry)
+    private func yearMatches(_ e: DiaryEntry) -> Bool {
+        guard selectedYear != 0 else { return true }
+        return Calendar.current.component(.year, from: e.date) == selectedYear
     }
 
-    // MARK: - Thumbs
-    // ContentView.swift 内：listRow(_:) で呼ばれるサムネイル表示ヘルパを差し替え
+    private func blockMatches(_ e: DiaryEntry) -> Bool {
+        guard !selectedBlock.isEmpty else { return true }
+        // 完全一致。部分一致にしたい場合は contains を利用
+        return e.block.compare(selectedBlock, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+    }
+
+    // MARK: - 候補構築（「固定順 → 出現順」）
+    private func rebuildYearAndBlockOptions() {
+        // 年候補：データからユニーク抽出 → 降順（最新が先頭）
+        availableYears = Set(store.entries.map { Calendar.current.component(.year, from: $0.date) })
+            .sorted(by: >)
+
+        // 区画候補：設定順をそのまま採用（EntryEditorView と同じ）
+        // store.settings.blocks は Identifiable な配列想定（.name を使用）
+        let fixed = store.settings.blocks
+            .map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        // 追加：設定に無い区画がデータ側にあれば“出現順”で後ろに足す
+        // （余裕があれば、ここごと削って「固定順のみ」にしてもOK）
+        let fixedKeys = Set(fixed.map { canonical($0) })
+        var extrasOrdered: [String] = []
+        var seen = Set<String>()
+        for e in store.entries {
+            let raw = e.block.trimmingCharacters(in: .whitespacesAndNewlines)
+            let key = canonical(raw)
+            guard !raw.isEmpty else { continue }
+            if !fixedKeys.contains(key) && !seen.contains(key) {
+                seen.insert(key)
+                extrasOrdered.append(raw)
+            }
+        }
+
+        // 先頭に ""（=すべて）→ 設定順 → 追加分（出現順）
+        blockOptions = [""] + fixed + extrasOrdered
+
+        // 選択の妥当性
+        if !availableYears.contains(selectedYear) {
+            selectedYear = availableYears.first ?? 0
+        }
+        if !blockOptions.contains(selectedBlock) {
+            selectedBlock = "" // すべて
+        }
+    }
+    // MARK: - ヘルパー（ここが前回は“関数の中”に入っていた可能性大）
+    // 4桁 + 「年」（カンマ無し）
+    private func yearTitle(_ y: Int) -> String { "\(String(y))年" }
+
+    // 正規化キー：全角→半角スペース、前後空白除去、小文字化
+    private func canonical(_ s: String) -> String {
+        s.replacingOccurrences(of: "　", with: " ")
+         .trimmingCharacters(in: .whitespacesAndNewlines)
+         .lowercased()
+    }
+
+    // 入力順を維持したまま重複排除（正規化キーで判定）
+    private func stableUniq(_ array: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for raw in array {
+            let trimmed = raw.replacingOccurrences(of: "　", with: " ")
+                             .trimmingCharacters(in: .whitespacesAndNewlines)
+            let key = canonical(trimmed)
+            if !key.isEmpty && !seen.contains(key) {
+                seen.insert(key)
+                result.append(trimmed)
+            }
+        }
+        return result
+    }
+
+    // MARK: - Delete（既存）
+    private func onListSwipeDelete(_ offsets: IndexSet) {
+        let arr = filteredAndSorted()
+        for idx in offsets { store.removeEntry(arr[idx]) }
+    }
+    private func deleteRow(_ entry: DiaryEntry) { store.removeEntry(entry) }
+
+    // MARK: - Thumbs（既存）
     private func thumb(for entry: DiaryEntry) -> some View {
-        let size = CGSize(width: 180, height: 135)   // 表示サイズ（ThumbnailStoreと合わせる）
+        let size = CGSize(width: 180, height: 135)
         return Group {
             if let first = entry.photos.first, let img = thumbs.thumbnail(for: first) {
                 Image(nsImage: img)
@@ -210,17 +323,15 @@ struct ContentView: View {
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.15)))
             } else {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.gray.opacity(0.08))
-                    Image(systemName: "photo")
-                        .foregroundStyle(.secondary)
+                    RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.08))
+                    Image(systemName: "photo").foregroundStyle(.secondary)
                 }
                 .frame(width: size.width, height: size.height)
             }
         }
     }
 
-    // MARK: - Open windows (Editor / Statistics)
+    // MARK: - Window（既存）
     private func openEditorWindow(editing: DiaryEntry?) {
         if let e = editing { store.editingEntry = e } else { store.editingEntry = nil }
 
@@ -258,7 +369,7 @@ struct ContentView: View {
         win.makeKeyAndOrderFront(nil)
         statsWindows.append(win)
     }
-    
+
     private func deleteEntry(_ entry: DiaryEntry) {
         if let idx = store.entries.firstIndex(where: { $0.id == entry.id }) {
             store.entries.remove(at: idx)
@@ -266,7 +377,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Formatters
+    // MARK: - Formatters（既存）
     private static let dayFormatter: DateFormatter = {
         let df = DateFormatter()
         df.calendar = Calendar(identifier: .gregorian)
@@ -283,6 +394,7 @@ struct ContentView: View {
     }()
 }
 
+// 既存
 fileprivate extension View {
     func eraseToAnyView() -> AnyView { AnyView(self) }
 }

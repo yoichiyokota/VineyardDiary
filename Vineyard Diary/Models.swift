@@ -100,6 +100,8 @@ struct DiaryEntry: Identifiable, Codable, Hashable {
     var volunteers: [String] = []              // ボランティア氏名
     var photos: [String] = []                  // ファイル名配列
     var photoCaptions: [String: String] = [:]  //写真キャプション（キー＝ファイル名）
+    var updatedAt: Date = Date()
+
 
     // 気象
     var weatherMin: Double? = nil

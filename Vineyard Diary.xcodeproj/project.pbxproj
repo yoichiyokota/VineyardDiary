@@ -6,19 +6,52 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		9853D8D42E667F0400FDE0CB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9853D8A82E667F0400FDE0CB /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		9853D8A82E667F0400FDE0CB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9853D8FB2E66D28A00FDE0CB /* VineyardDiary iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "VineyardDiary iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		98B09D522E59B3F6007EF040 /* Vineyard Diary.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Vineyard Diary.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9853D9152E66DC9900FDE0CB /* Exceptions for "Shared" folder in "VineyardDiary iOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/BlockMaster.swift,
+				Models/YearRange.swift,
+				Stores/DailyWeatherStore.swift,
+				Views/ContentView.swift,
+				Views/EntryEditorView.swift,
+			);
+			target = 9853D8FA2E66D28A00FDE0CB /* VineyardDiary iOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		9853D8DA2E66A7D500FDE0CB /* Models */ = {
+		9853D8FC2E66D28A00FDE0CB /* VineyardDiary iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Models;
+			path = "VineyardDiary iOS";
 			sourceTree = "<group>";
 		};
-		9853D8E62E66A99D00FDE0CB /* UI */ = {
+		9853D9072E66DB7000FDE0CB /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = UI;
+			exceptions = (
+				9853D9152E66DC9900FDE0CB /* Exceptions for "Shared" folder in "VineyardDiary iOS" target */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		9853D90F2E66DC0800FDE0CB /* iOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		9853D9122E66DC3300FDE0CB /* macOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = macOS;
 			sourceTree = "<group>";
 		};
 		98B09D542E59B3F6007EF040 /* Vineyard Diary */ = {
@@ -29,6 +62,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		9853D8F82E66D28A00FDE0CB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		98B09D4F2E59B3F6007EF040 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -42,9 +82,12 @@
 		98B09D492E59B3F6007EF040 = {
 			isa = PBXGroup;
 			children = (
-				9853D8E62E66A99D00FDE0CB /* UI */,
-				9853D8DA2E66A7D500FDE0CB /* Models */,
+				9853D8A82E667F0400FDE0CB /* Assets.xcassets */,
+				9853D9122E66DC3300FDE0CB /* macOS */,
+				9853D90F2E66DC0800FDE0CB /* iOS */,
+				9853D9072E66DB7000FDE0CB /* Shared */,
 				98B09D542E59B3F6007EF040 /* Vineyard Diary */,
+				9853D8FC2E66D28A00FDE0CB /* VineyardDiary iOS */,
 				98B09D532E59B3F6007EF040 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -53,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				98B09D522E59B3F6007EF040 /* Vineyard Diary.app */,
+				9853D8FB2E66D28A00FDE0CB /* VineyardDiary iOS.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -60,6 +104,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		9853D8FA2E66D28A00FDE0CB /* VineyardDiary iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9853D9032E66D28D00FDE0CB /* Build configuration list for PBXNativeTarget "VineyardDiary iOS" */;
+			buildPhases = (
+				9853D8F72E66D28A00FDE0CB /* Sources */,
+				9853D8F82E66D28A00FDE0CB /* Frameworks */,
+				9853D8F92E66D28A00FDE0CB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9853D8FC2E66D28A00FDE0CB /* VineyardDiary iOS */,
+			);
+			name = "VineyardDiary iOS";
+			packageProductDependencies = (
+			);
+			productName = "VineyardDiary iOS";
+			productReference = 9853D8FB2E66D28A00FDE0CB /* VineyardDiary iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
 		98B09D512E59B3F6007EF040 /* Vineyard Diary */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 98B09D5E2E59B3F8007EF040 /* Build configuration list for PBXNativeTarget "Vineyard Diary" */;
@@ -73,8 +139,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				9853D8DA2E66A7D500FDE0CB /* Models */,
-				9853D8E62E66A99D00FDE0CB /* UI */,
+				9853D9072E66DB7000FDE0CB /* Shared */,
+				9853D90F2E66DC0800FDE0CB /* iOS */,
+				9853D9122E66DC3300FDE0CB /* macOS */,
 				98B09D542E59B3F6007EF040 /* Vineyard Diary */,
 			);
 			name = "Vineyard Diary";
@@ -94,6 +161,9 @@
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
+					9853D8FA2E66D28A00FDE0CB = {
+						CreatedOnToolsVersion = 16.4;
+					};
 					98B09D512E59B3F6007EF040 = {
 						CreatedOnToolsVersion = 16.4;
 						LastSwiftMigration = 1640;
@@ -115,21 +185,37 @@
 			projectRoot = "";
 			targets = (
 				98B09D512E59B3F6007EF040 /* Vineyard Diary */,
+				9853D8FA2E66D28A00FDE0CB /* VineyardDiary iOS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		98B09D502E59B3F6007EF040 /* Resources */ = {
+		9853D8F92E66D28A00FDE0CB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		98B09D502E59B3F6007EF040 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9853D8D42E667F0400FDE0CB /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		9853D8F72E66D28A00FDE0CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		98B09D4E2E59B3F6007EF040 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -140,6 +226,81 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		9853D9042E66D28D00FDE0CB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "VineyardDiary iOS/VineyardDiary iOS.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9UCT2C937A;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.collduno.VineyardDiary-iOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9853D9052E66D28D00FDE0CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "VineyardDiary iOS/VineyardDiary iOS.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9UCT2C937A;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.collduno.VineyardDiary-iOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		98B09D5C2E59B3F8007EF040 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -273,7 +434,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Vineyard-Diary-Info.plist";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "COLL D'UNO Vineyard,Inc.";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -284,13 +446,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.collduno.VineyardDiary;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = macosx;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -309,7 +470,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Vineyard-Diary-Info.plist";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "COLL D'UNO Vineyard,Inc.";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -320,18 +482,26 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.collduno.VineyardDiary;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = macosx;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		9853D9032E66D28D00FDE0CB /* Build configuration list for PBXNativeTarget "VineyardDiary iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9853D9042E66D28D00FDE0CB /* Debug */,
+				9853D9052E66D28D00FDE0CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		98B09D4D2E59B3F6007EF040 /* Build configuration list for PBXProject "Vineyard Diary" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

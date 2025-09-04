@@ -119,3 +119,9 @@ final class DailyWeatherStore: ObservableObject {
         self.save()
     }
 }
+
+extension DailyWeatherStore {
+    func all(for block: String) -> [DailyWeather] {
+        data[block]?.values.sorted(by: { $0.date < $1.date }) ?? []
+    }
+}

@@ -1,18 +1,19 @@
+#if os(macOS)
+
 import SwiftUI
-import PhotosUI
 import AppKit
+import UniformTypeIdentifiers
 
 struct EntryEditorView: View {
     @EnvironmentObject var store: DiaryStore
     @EnvironmentObject var weather: DailyWeatherStore
     @Environment(\.dismiss) private var dismiss
     
-    @StateObject private var thumbs = ThumbnailStore()   // ← 追加：軽量サムネイル
+    @StateObject private var thumbs = ThumbnailStore()
 
     @State private var working = DiaryEntry(date: Date(), block: "")
     @State private var volunteersText = ""
-    @State private var selectedPhotos: [PhotosPickerItem] = []
-    @State private var previewName: String? = nil        // ← 画像そのものではなくファイル名だけ保持
+    @State private var previewName: String? = nil
     @State private var isShowingPreview = false
     
     private let labelWidth: CGFloat = 96
@@ -38,17 +39,15 @@ struct EntryEditorView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
             }
-            
             footerBar
         }
         .frame(minWidth: 900, minHeight: 820)
         .onAppear { initializeWorkingBuffer() }
         .sheet(isPresented: $isShowingPreview, onDismiss: {
-            // シート閉じたら参照を外して解放
             previewName = nil
         }) {
             if let name = previewName {
-                PreviewSheetView(fileName: name)   // 必要時のみ大きな画像をロード
+                PreviewSheetView(fileName: name)
             } else {
                 Text("画像を読み込めませんでした").padding()
             }
@@ -293,26 +292,13 @@ struct EntryEditorView: View {
         }
     }
     
-    // 写真セクション（Photosアプリから選択 / フォールバックでファイルからも）
+    // MARK: - Photos section (platform split)
     private var photosSection: some View {
         Grid {
             GridRow {
                 Text("写真").frame(width: labelWidth, alignment: .leading)
                 HStack(spacing: 12) {
-                    if #available(macOS 13.0, *) {
-                        PhotosPicker(
-                            selection: $selectedPhotos,
-                            maxSelectionCount: 12,
-                            matching: .images,
-                            photoLibrary: .shared()
-                        ) {
-                            Label("写真を追加（写真App）", systemImage: "photo.on.rectangle.angled")
-                        }
-                        .onChange(of: selectedPhotos) { items in
-                            importPhotos(items: items)
-                        }
-                    }
-                    
+                  
                     Button {
                         let panel = NSOpenPanel()
                         panel.allowedContentTypes = [.image]
@@ -348,22 +334,6 @@ struct EntryEditorView: View {
                     Text("").frame(width: labelWidth)
                     ScrollView(.horizontal, showsIndicators: true) {
                         HStack(spacing: 8) {
-                           // ForEach(working.photos, id: \.self) { name in
-                           //     PhotoThumbView(
-                           //         fileName: name,
-                           //         size: photoThumbSize,
-                           //         thumbnailStore: thumbs,
-                           //         onTap: {
-                           //             previewName = name
-                           //             isShowingPreview = true
-                           //         },
-                           //         onDelete: {
-                           //             if let idx = working.photos.firstIndex(of: name) {
-                           //                 working.photos.remove(at: idx)
-                           //             }
-                           //         }
-                           //     )
-                           // }
                             ForEach(working.photos, id: \.self) { name in
                                 PhotoThumbWithCaptionView(
                                     fileName: name,
@@ -381,7 +351,7 @@ struct EntryEditorView: View {
                                         if let idx = working.photos.firstIndex(of: name) {
                                             working.photos.remove(at: idx)
                                         }
-                                        working.photoCaptions[name] = nil   // キャプションも掃除
+                                        working.photoCaptions[name] = nil
                                     }
                                 )
                             }
@@ -468,71 +438,10 @@ struct EntryEditorView: View {
     private func closeWindow() {
         NSApp.keyWindow?.performClose(nil)
     }
-    
-    // PhotosPicker からの取り込み（Documents へ保存 → working.photos に追記）
-    private func importPhotos(items: [PhotosPickerItem]) {
-        Task {
-            for item in items {
-                autoreleasepool {
-                    // 画像データとして直接取得（macOS 13+）
-                    Task {
-                        if let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty {
-                            let name = "photo_\(UUID().uuidString).jpg"
-                            let url  = URL.documentsDirectory.appendingPathComponent(name)
-                            do {
-                                try data.write(to: url, options: .atomic)
-                                await MainActor.run { working.photos.append(name) }
-                            } catch {
-                                print("write photo failed:", error)
-                            }
-                        }
-                    }
-                }
-            }
-            await MainActor.run { selectedPhotos.removeAll() }
-        }
-    }
+ 
 }
 
-// MARK: - サムネイルサムビュー（軽量画像のみ使用）
-private struct PhotoThumbView: View {
-    let fileName: String
-    let size: CGSize
-    let thumbnailStore: ThumbnailStore
-    var onTap: () -> Void
-    let onDelete: () -> Void
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Button(action: onTap) {
-                if let img = thumbnailStore.thumbnail(for: fileName) {
-                    Image(nsImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
-                        .clipped()
-                        .cornerRadius(6)
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.2)))
-                } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.gray.opacity(0.08))
-                            .frame(width: size.width, height: size.height)
-                        Image(systemName: "photo")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-
-            Button(role: .destructive, action: onDelete) {
-                Image(systemName: "minus.circle")
-            }
-            .buttonStyle(.borderless)
-        }
-    }
-}
-
+// MARK: - Thumb views (platform-safe)
 private struct PhotoThumbWithCaptionView: View {
     let fileName: String
     let size: CGSize
@@ -543,10 +452,9 @@ private struct PhotoThumbWithCaptionView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            // サムネ＋プレビュー起動
             Button(action: onTap) {
-                if let img = thumbnailStore.thumbnail(for: fileName) {
-                    Image(nsImage: img)
+                if let nsimg = thumbnailStore.thumbnail(for: fileName) {
+                    Image(nsImage: nsimg)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: size.width, height: size.height)
@@ -554,34 +462,36 @@ private struct PhotoThumbWithCaptionView: View {
                         .cornerRadius(6)
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.gray.opacity(0.2)))
                 } else {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.gray.opacity(0.08))
-                            .frame(width: size.width, height: size.height)
-                        Image(systemName: "photo")
-                            .foregroundStyle(.secondary)
-                    }
+                    placeholderThumb
                 }
             }
             .buttonStyle(.plain)
 
-            // キャプション欄（1行）
             TextField("キャプション", text: $caption)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: size.width)
 
-            // 削除ボタン
             Button(role: .destructive, action: onDelete) {
                 Image(systemName: "minus.circle")
             }
             .buttonStyle(.borderless)
         }
     }
+
+    private var placeholderThumb: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.gray.opacity(0.08))
+                .frame(width: size.width, height: size.height)
+            Image(systemName: "photo")
+                .foregroundStyle(.secondary)
+        }
+    }
 }
 
-// MARK: - プレビューシート（必要時のみフル解像度を読み込み、閉じたら解放）
+// MARK: - Preview sheet (platform split)
 private struct PreviewSheetView: View {
-    @Environment(\.dismiss) private var dismiss   // ← 追加：SwiftUIのシート閉じるAPI
+    @Environment(\.dismiss) private var dismiss
     let fileName: String
     @State private var bigImage: NSImage? = nil
 
@@ -589,9 +499,7 @@ private struct PreviewSheetView: View {
         VStack {
             HStack {
                 Spacer()
-                Button {
-                    dismiss()                       // ← これで確実にシートが閉じます
-                } label: {
+                Button { dismiss() } label: {
                     Image(systemName: "xmark.circle.fill").imageScale(.large)
                 }
                 .buttonStyle(.plain)
@@ -615,15 +523,12 @@ private struct PreviewSheetView: View {
         }
         .frame(minWidth: 640, minHeight: 480)
         .onAppear {
-            // 必要時のみフル解像度をロード（オートリリースプールで一時メモリ即解放）
             let url = URL.documentsDirectory.appendingPathComponent(fileName)
             bigImage = autoreleasepool(invoking: { NSImage(contentsOf: url) })
         }
-        .onDisappear {
-            // 解放
-            bigImage = nil
-        }
-        // 左上の●●●(赤黄緑)で閉じる/ESCで閉じる両方を許可
+        .onDisappear { bigImage = nil }
         .interactiveDismissDisabled(false)
     }
 }
+
+#endif

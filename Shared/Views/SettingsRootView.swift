@@ -1,4 +1,13 @@
 import SwiftUI
+import Foundation
+
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+import AudioToolbox
+#endif
+
 
 struct SettingsRootView: View {
     @EnvironmentObject var store: DiaryStore
@@ -170,7 +179,7 @@ private struct DMSInputField: View {
 
     private func syncFromModel() {
         if let v = value {
-            text = ddToDMS(v, isLat: isLat)   // ← DMS.swift の関数を利用
+            text = ddToDMS(v)   // ← DMS.swift の関数を利用
         } else {
             text = ""
         }
@@ -182,11 +191,56 @@ private struct DMSInputField: View {
             value = nil
             return
         }
-        if let dd = dmsToDD(trimmed, isLat: isLat) { // ← DMS.swift の関数を利用
+        if let dd = dmsToDD(trimmed) {// ← DMS.swift の関数を利用
             value = dd
-            text = ddToDMS(dd, isLat: isLat)        // 正規化して表示
+            text = ddToDMS(dd)       // 正規化して表示
         } else {
-            NSSound.beep() // 入力が解釈できない場合
+            playFeedback() // 入力が解釈できない場合
         }
     }
+}
+
+/// 10進度 (DD) → 度分秒文字列（例: 35°12'34.50" / -139°44'00.00"）
+func ddToDMS(_ dd: Double) -> String {
+    let sign = dd < 0 ? -1.0 : 1.0
+    let absVal = abs(dd)
+    let deg = Int(absVal.rounded(.down))
+    let minFloat = (absVal - Double(deg)) * 60.0
+    let min = Int(minFloat.rounded(.down))
+    let sec = (minFloat - Double(min)) * 60.0
+    let prefix = sign < 0 ? "-" : ""
+    return String(format: "%@%d°%02d'%05.2f\"", prefix, deg, min, sec)
+}
+
+/// 度分秒文字列 → 10進度 (DD)
+/// 受け入れ例: "35°12'34.5\"", "-139 44 0", "35d12m34.5s"
+func dmsToDD(_ s: String) -> Double? {
+    // 許容：度,分,秒 を区切る記号 / 空白 を広めに対応
+    let pattern = #"^\s*([+-]?\d+)[°d\s]+(\d+)?['m\s]*([0-9.]+)?["s\s]*$"#
+    guard let re = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+    let ns = s as NSString
+    guard let m = re.firstMatch(in: s, options: [], range: NSRange(location: 0, length: ns.length)) else { return nil }
+    func group(_ i: Int) -> String? {
+        let r = m.range(at: i)
+        guard r.location != NSNotFound else { return nil }
+        return ns.substring(with: r)
+    }
+    guard let degStr = group(1), let deg = Double(degStr) else { return nil }
+    let min = Double(group(2) ?? "0") ?? 0
+    let sec = Double(group(3) ?? "0") ?? 0
+    let absVal = abs(deg) + min/60.0 + sec/3600.0
+    return deg < 0 ? -absVal : absVal
+}
+
+func playFeedback() {
+    #if os(macOS)
+    // システム標準のビープでOK（または "Glass" など）
+    NSSound.beep()
+    #else
+    if #available(iOS 10.0, *) {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    } else {
+        AudioServicesPlaySystemSound(1103) // 旧来のシステム音
+    }
+    #endif
 }

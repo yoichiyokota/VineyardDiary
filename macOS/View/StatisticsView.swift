@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 import Charts
 
@@ -585,3 +586,5 @@ fileprivate let yyyyMMddDF: DateFormatter = {
     df.dateFormat = "yyyy-MM-dd"
     return df
 }()
+
+#endif

@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 @main
@@ -10,18 +11,33 @@ struct VineyardDiaryApp: App {
             ContentView()
                 .environmentObject(store)
                 .environmentObject(weather)
-                .task {    // .onAppear より確実
+                .task {
                     weather.load()
                     await backfillDailyWeatherAndRefreshEntries()
                 }
         }
         .commands {
             CommandMenu("データ") {
+                // 年初〜今日まで、全区画の気象データを再取得
                 Button("今年の気象データを再取得（全区画）") {
                     Task { await backfillDailyWeatherAndRefreshEntries() }
                 }
-                .keyboardShortcut("R", modifiers: [.command, .shift])
-            
+                .keyboardShortcut("R", modifiers: [.command, .shift]) // ⌘⇧R
+
+                // JSON エクスポート（iOS で読み込める共有データ）
+                Button("JSONを書き出す…") {
+                    JSONExporter.run(entries: store.entries)
+                }
+                .keyboardShortcut("E", modifiers: [.command, .option]) // ⌘⌥E
+                Button("設定を書き出す…") {
+                    SettingsExporter.run(
+                        blocks: store.settings.blocks,
+                        varieties: store.settings.varieties,
+                        stages: store.settings.stages
+                    )
+                }
+                Divider()
+
                 // バックアップ作成
                 Button("バックアップを作成") {
                     Task { @MainActor in
@@ -32,37 +48,45 @@ struct VineyardDiaryApp: App {
                                 dailyWeather: weather.data
                             )
                             print("✅ バックアップ保存:", url.path)
-                        } catch { print("❌ バックアップ作成失敗:", error) }
+                        } catch {
+                            print("❌ バックアップ作成失敗:", error)
+                        }
                     }
                 }
 
+                // バックアップから復元
                 Button("バックアップから復元") {
                     Task { @MainActor in
                         do {
                             let payload = try BackupManager.importBackupWithPanel()
                             store.settings = payload.settings
                             store.entries  = payload.entries
-                            weather.replaceAll(with: payload.dailyWeather) // ← 先ほどのメソッド
+                            weather.replaceAll(with: payload.dailyWeather)
                             store.save()
                             print("✅ 復元完了")
-                        } catch { print("❌ 復元失敗:", error) }
+                        } catch {
+                            print("❌ 復元失敗:", error)
+                        }
                     }
                 }
 
                 Divider()
 
+                // 既存の CSV エクスポート
                 Button("CSVエクスポート") {
                     Task { @MainActor in
                         do {
                             let url = try CSVExporter.saveWithPanelFlatteningNewlines(entries: store.entries)
                             print("✅ CSV保存:", url.path)
-                        } catch { print("❌ CSV失敗:", error) }
+                        } catch {
+                            print("❌ CSV失敗:", error)
+                        }
                     }
-
                 }
-                .keyboardShortcut("E", modifiers: [.command, .shift])
+                .keyboardShortcut("E", modifiers: [.command, .shift]) // ⌘⇧E
             }
         }
+
         Settings {
             SettingsRootView()
                 .environmentObject(store)
@@ -99,3 +123,4 @@ struct VineyardDiaryApp: App {
         store.refreshEntriesWeatherFromCache(using: weather)
     }
 }
+#endif

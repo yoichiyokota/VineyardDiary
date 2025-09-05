@@ -2,6 +2,7 @@
 
 import SwiftUI
 import AppKit
+import PhotosUI
 import UniformTypeIdentifiers
 
 struct EntryEditorView: View {
@@ -15,6 +16,7 @@ struct EntryEditorView: View {
     @State private var volunteersText = ""
     @State private var previewName: String? = nil
     @State private var isShowingPreview = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []  // 写真App選択結果
     
     private let labelWidth: CGFloat = 96
     private let drugNameFieldWidth: CGFloat = 220
@@ -53,6 +55,28 @@ struct EntryEditorView: View {
             }
         }
     }
+    
+    @available(macOS 13.0, *)
+    private func importPhotosFromPhotosApp(items: [PhotosPickerItem]) {
+        Task {
+            for item in items {
+                // 画像データを直接取得
+                if let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty {
+                    let name = "photo_\(UUID().uuidString).jpg"
+                    let url  = URL.documentsDirectory.appendingPathComponent(name)
+                    do {
+                        try data.write(to: url, options: .atomic)
+                        // working に追記（あなたの変数名が違う場合は合わせてください）
+                        working.photos.append(name)
+                    } catch {
+                        print("write photo failed:", error)
+                    }
+                }
+            }
+            await MainActor.run { selectedPhotos.removeAll() }
+        }
+    }
+
     
     // MARK: - Header
     private var headerBar: some View {
@@ -299,6 +323,20 @@ struct EntryEditorView: View {
                 Text("写真").frame(width: labelWidth, alignment: .leading)
                 HStack(spacing: 12) {
                   
+                    if #available(macOS 13.0, *) {
+                        PhotosPicker(
+                            selection: $selectedPhotos,
+                            maxSelectionCount: 12,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            Label("写真を追加（写真App）", systemImage: "photo.on.rectangle.angled")
+                        }
+                        .onChange(of: selectedPhotos) { _, items in
+                            importPhotosFromPhotosApp(items: items)
+                        }
+                    }
+                    
                     Button {
                         let panel = NSOpenPanel()
                         panel.allowedContentTypes = [.image]
@@ -371,6 +409,7 @@ struct EntryEditorView: View {
                 .keyboardShortcut(.defaultAction)
         }
         .padding()
+        
     }
     
     // MARK: - Logic

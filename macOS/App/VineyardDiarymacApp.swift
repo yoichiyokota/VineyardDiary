@@ -13,30 +13,22 @@ struct VineyardDiaryApp: App {
                 .environmentObject(weather)
                 .task {
                     weather.load()
-                    await backfillDailyWeatherAndRefreshEntries()
+                    await backfillDailyWeatherAndRefreshEntries(store: store, weather: weather)
                 }
         }
         .commands {
             CommandMenu("データ") {
+                
                 // 年初〜今日まで、全区画の気象データを再取得
                 Button("今年の気象データを再取得（全区画）") {
-                    Task { await backfillDailyWeatherAndRefreshEntries() }
+                    Task { await backfillDailyWeatherAndRefreshEntries(store: store, weather: weather) }
                 }
                 .keyboardShortcut("R", modifiers: [.command, .shift]) // ⌘⇧R
 
-                // JSON エクスポート（iOS で読み込める共有データ）
-                Button("JSONを書き出す…") {
-                    JSONExporter.run(entries: store.entries)
-                }
-                .keyboardShortcut("E", modifiers: [.command, .option]) // ⌘⌥E
-                Button("設定を書き出す…") {
-                    SettingsExporter.run(
-                        blocks: store.settings.blocks,
-                        varieties: store.settings.varieties,
-                        stages: store.settings.stages
-                    )
-                }
-                Divider()
+                // macOS メニューなどから
+                Button("iOSと共有データを書き出し…") {
+                        Task { await SharedPackageExporter.exportSharedPackageWithPanel(store: store, weather: weather) }
+                    }
 
                 // バックアップ作成
                 Button("バックアップを作成") {
@@ -94,33 +86,6 @@ struct VineyardDiaryApp: App {
                 .frame(minWidth: 700, minHeight: 500)
                 .padding()
         }
-    }
-
-    /// 年初(1/1)〜今日までを各区画でバックフィルし、完了後に日記へ反映
-    @MainActor
-    private func backfillDailyWeatherAndRefreshEntries() async {
-        let cal   = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let year  = cal.component(.year, from: today)
-        let start = cal.date(from: DateComponents(year: year, month: 1, day: 1)) ?? today
-
-        for block in store.settings.blocks {
-            guard let lat = block.latitude, let lon = block.longitude else {
-                print("⚠️ \(block.name) は緯度経度未設定のためスキップ")
-                continue
-            }
-            do {
-                let items = try await WeatherService.fetchDailyRange(lat: lat, lon: lon, from: start, to: today)
-                for it in items { weather.set(block: block.name, item: it) }
-                print("✅ \(block.name) 取得 \(items.count)件")
-            } catch {
-                print("❌ \(block.name) 取得失敗:", error)
-            }
-        }
-        weather.save()
-
-        // 取得分を日記に反映
-        store.refreshEntriesWeatherFromCache(using: weather)
     }
 }
 #endif

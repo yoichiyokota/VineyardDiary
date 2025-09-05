@@ -17,8 +17,12 @@ struct EntryEditorView: View {
     @State private var showDeletePhotoAlert = false
     @State private var photoToDelete: String? = nil
 
-    // 写真ピッカー
+    // 写真ピッカー（アプリ内に“新規取り込み”する時だけ使用）
     @State private var selectedItems: [PhotosPickerItem] = []
+
+    // プレビュー（後日拡張用のダミー）
+    @State private var previewName: String? = nil
+    @State private var showingPreview = false
 
     // レイアウト
     private let thumbSize = CGSize(width: 84, height: 63)
@@ -37,24 +41,20 @@ struct EntryEditorView: View {
                         }
                     }
 
-                    // 参考（保存後に付与される気象）
                     HStack {
                         Label("最高/最低", systemImage: "thermometer.sun")
                         Spacer()
-                        Text(tempLabel(for: working) ?? "—")
-                            .foregroundStyle(.secondary)
+                        Text(tempLabel(for: working) ?? "—").foregroundStyle(.secondary)
                     }
                     HStack {
                         Label("日照", systemImage: "sun.max")
                         Spacer()
-                        Text(sunshineLabel(for: working) ?? "—")
-                            .foregroundStyle(.secondary)
+                        Text(sunshineLabel(for: working) ?? "—").foregroundStyle(.secondary)
                     }
                     HStack {
                         Label("降水", systemImage: "cloud.rain")
                         Spacer()
-                        Text(rainLabel(for: working) ?? "—")
-                            .foregroundStyle(.secondary)
+                        Text(rainLabel(for: working) ?? "—").foregroundStyle(.secondary)
                     }
                 }
 
@@ -68,7 +68,6 @@ struct EntryEditorView: View {
                                     Text(v.name).tag(v.name)
                                 }
                             }
-
                             Picker("成長ステージ", selection: $working.varieties[i].stage) {
                                 Text("未選択").tag("")
                                 ForEach(store.settings.stages) { s in
@@ -83,12 +82,9 @@ struct EntryEditorView: View {
                                 } else {
                                     working.varieties[0] = .init(varietyName: "", stage: "")
                                 }
-                            } label: {
-                                Label("削除", systemImage: "trash")
-                            }
+                            } label: { Label("削除", systemImage: "trash") }
                         }
                     }
-
                     Button {
                         working.varieties.append(.init())
                     } label: {
@@ -99,7 +95,6 @@ struct EntryEditorView: View {
                 // 防除
                 Section(header: Text("防除")) {
                     Toggle("防除実施", isOn: $working.isSpraying)
-
                     if working.isSpraying {
                         TextField("総使用量（L）", text: $working.sprayTotalLiters)
                             .keyboardType(.decimalPad)
@@ -114,9 +109,7 @@ struct EntryEditorView: View {
                                 }
                             }
                             .swipeActions {
-                                Button(role: .destructive) {
-                                    working.sprays.remove(at: i)
-                                } label: {
+                                Button(role: .destructive) { working.sprays.remove(at: i) } label: {
                                     Label("削除", systemImage: "trash")
                                 }
                             }
@@ -132,29 +125,25 @@ struct EntryEditorView: View {
 
                 // 作業メモ
                 Section(header: Text("作業メモ")) {
-                    TextField("作業内容", text: $working.workNotes, axis: .vertical)
-                        .lineLimit(3...6)
-                    TextField("備考", text: $working.memo, axis: .vertical)
-                        .lineLimit(2...4)
+                    TextField("作業内容", text: $working.workNotes, axis: .vertical).lineLimit(3...6)
+                    TextField("備考", text: $working.memo, axis: .vertical).lineLimit(2...4)
                 }
 
                 // 作業時間
                 Section(header: Text("作業時間")) {
                     ForEach(working.workTimes.indices, id: \.self) { i in
                         HStack {
-                            DatePicker("開始", selection: Binding(
-                                get: { working.workTimes[i].start },
-                                set: { working.workTimes[i].start = $0 }),
+                            DatePicker("開始",
+                                       selection: Binding(get: { working.workTimes[i].start },
+                                                          set: { working.workTimes[i].start = $0 }),
                                        displayedComponents: .hourAndMinute)
-                            DatePicker("終了", selection: Binding(
-                                get: { working.workTimes[i].end },
-                                set: { working.workTimes[i].end = $0 }),
+                            DatePicker("終了",
+                                       selection: Binding(get: { working.workTimes[i].end },
+                                                          set: { working.workTimes[i].end = $0 }),
                                        displayedComponents: .hourAndMinute)
                         }
                         .swipeActions {
-                            Button(role: .destructive) {
-                                working.workTimes.remove(at: i)
-                            } label: {
+                            Button(role: .destructive) { working.workTimes.remove(at: i) } label: {
                                 Label("削除", systemImage: "trash")
                             }
                         }
@@ -173,18 +162,12 @@ struct EntryEditorView: View {
                         .autocorrectionDisabled()
                 }
 
-                // 写真
+                // 写真（※ここが“ノンブロッキング”版）
                 Section(header: Text("写真")) {
-                    PhotosPicker(
-                        selection: $selectedItems,
-                        maxSelectionCount: 12,
-                        matching: .images
-                    ) {
-                        Label("写真を追加", systemImage: "photo.on.rectangle.angled")
+                    PhotosPicker(selection: $selectedItems, maxSelectionCount: 12, matching: .images) {
+                        Label("写真を追加（アプリ内にコピー）", systemImage: "photo.on.rectangle.angled")
                     }
-                    .onChange(of: selectedItems) { _, items in
-                        importPhotos(items)
-                    }
+                    .onChange(of: selectedItems) { _, items in importPhotos(items) }
 
                     if working.photos.isEmpty {
                         Text("写真はまだありません").foregroundStyle(.secondary)
@@ -192,13 +175,21 @@ struct EntryEditorView: View {
                         LazyVGrid(columns: [.init(.adaptive(minimum: thumbSize.width), spacing: 12)], spacing: 12) {
                             ForEach(working.photos, id: \.self) { name in
                                 VStack(spacing: 6) {
-                                    Button {
-                                        // iOS 簡易版：プレビューは後日。まずは保存・一覧を優先
-                                    } label: {
-                                        photoThumb(name: name, size: thumbSize)
+                                    // ① まずアプリ内ドキュメント（即表示可）
+                                    if let ui = localUIImage(for: name) {
+                                        Image(uiImage: ui)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: thumbSize.width, height: thumbSize.height)
+                                            .clipped()
+                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.15)))
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    } else {
+                                        // ② 共有パッケージ上の写真は“雲”でプレース（非同期ダウンロードは指示だけ）
+                                        PlaceholderCloudThumb(caption: working.photoCaptions[name] ?? "",
+                                                              size: thumbSize,
+                                                              sharedURL: sharedPhotoURL(for: name))
                                     }
-                                    .buttonStyle(.plain)
 
                                     TextField("キャプション",
                                               text: Binding(
@@ -268,13 +259,11 @@ struct EntryEditorView: View {
         isSaving = true
         defer { isSaving = false }
 
-        // volunteers を同期
         working.volunteers = volunteersText
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
 
-        // まずエントリ保存
         if let editing = store.editingEntry {
             var updated = working; updated.id = editing.id
             store.updateEntry(updated); store.editingEntry = nil
@@ -283,22 +272,16 @@ struct EntryEditorView: View {
         }
         store.save()
 
-        // 区画の座標があれば気象取得
         guard let blk = store.settings.blocks.first(where: { $0.name == working.block }),
-              let lat = blk.latitude, let lon = blk.longitude
-        else {
+              let lat = blk.latitude, let lon = blk.longitude else {
             dismiss(); return
         }
 
         let day = Calendar.current.startOfDay(for: working.date)
-        // 既にキャッシュがあるなら即反映
         if let w = weather.get(block: blk.name, date: day) {
-            applyWeather(w)
-            dismiss()
-            return
+            applyWeather(w); dismiss(); return
         }
 
-        // ネット取得
         do {
             let items = try await WeatherService.fetchDailyRange(lat: lat, lon: lon, from: day, to: day)
             if let first = items.first {
@@ -308,23 +291,21 @@ struct EntryEditorView: View {
                 store.save()
             }
         } catch {
-            // サイレント失敗（オフライン等）。編集は保存済み。
             print("iOS weather fetch failed:", error)
         }
-
         dismiss()
     }
 
     private func applyWeather(_ w: DailyWeather) {
         if let idx = store.entries.firstIndex(where: { $0.id == working.id }) {
-            store.entries[idx].weatherMin        = w.tMin
-            store.entries[idx].weatherMax        = w.tMax
-            store.entries[idx].sunshineHours     = w.sunshineHours
-            store.entries[idx].precipitationMm   = w.precipitationMm
+            store.entries[idx].weatherMin      = w.tMin
+            store.entries[idx].weatherMax      = w.tMax
+            store.entries[idx].sunshineHours   = w.sunshineHours
+            store.entries[idx].precipitationMm = w.precipitationMm
         }
     }
 
-    // MARK: - 写真取り込み（Documents に保存）
+    // MARK: - 写真取り込み（アプリ内 Documents に保存）
     private func importPhotos(_ items: [PhotosPickerItem]) {
         Task {
             for item in items {
@@ -343,25 +324,17 @@ struct EntryEditorView: View {
         }
     }
 
-    // MARK: - サムネ描画（超軽量）
-    private func photoThumb(name: String, size: CGSize) -> some View {
+    // MARK: - ローカル画像 & 共有写真URL（非ブロッキング）
+    private func localUIImage(for name: String) -> UIImage? {
         let url = URL.documentsDirectory.appendingPathComponent(name)
-        if let ui = UIImage(contentsOfFile: url.path) {
-            return Image(uiImage: ui)
-                .resizable()
-                .scaledToFill()
-                .frame(width: size.width, height: size.height)
-                .clipped()
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.15)))
-                .eraseToAnyView()
-        } else {
-            return ZStack {
-                RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08))
-                Image(systemName: "photo").foregroundStyle(.secondary)
-            }
-            .frame(width: size.width, height: size.height)
-            .eraseToAnyView()
-        }
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return UIImage(contentsOfFile: url.path)
+    }
+
+    /// 共有パッケージの Photos/ 内のURLを *必要な時だけ* 作る（存在確認やダウンロードは行わない）
+    private func sharedPhotoURL(for name: String) -> URL? {
+        guard let folder = SharedFolderBookmark.loadFolderURL() else { return nil }
+        return folder.appendingPathComponent("Photos").appendingPathComponent(name)
     }
 
     // MARK: - ラベル（参考表示）
@@ -381,8 +354,32 @@ struct EntryEditorView: View {
     }
 }
 
-// ちょい便利
-fileprivate extension View {
-    func eraseToAnyView() -> AnyView { AnyView(self) }
+/// 雲プレースホルダ（共有 URL が来ても **ダウンロード待ちはしない**）
+private struct PlaceholderCloudThumb: View {
+    let caption: String
+    let size: CGSize
+    let sharedURL: URL? // 参考表示のみ。ここでは触らない
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.08))
+            VStack(spacing: 6) {
+                Image(systemName: "icloud.and.arrow.down")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(.secondary)
+                Text("iCloud準備中")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .padding(6)
+        }
+        .frame(width: size.width, height: size.height)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.gray.opacity(0.15))
+        )
+        .help(sharedURL?.lastPathComponent ?? "iCloud")
+    }
 }
 #endif

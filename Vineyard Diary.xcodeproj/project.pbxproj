@@ -21,6 +21,7 @@
 		98163A9E2E6831C600D536F8 /* Exceptions for "Shared" folder in "Vineyard Diary" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Stores/ThumbnailPrefetcher.swift,
 				Views/EntryEditorView_iOS.swift,
 				Views/StatisticsView_iOS.swift,
 			);
@@ -29,13 +30,18 @@
 		9853D9152E66DC9900FDE0CB /* Exceptions for "Shared" folder in "VineyardDiary iOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Features/SharedFolderBookmark.swift,
+				Features/SharedFolderPickerButton.swift,
+				Features/WeatherBackfill.swift,
 				Models/BlockMaster.swift,
 				Models/DiaryEntry.swift,
+				Models/PhotosIndex.swift,
 				Models/VineyardDiaryFile.swift,
 				Models/VineyardSettingsFile.swift,
 				Models/YearRange.swift,
 				Stores/DailyWeatherStore.swift,
 				Stores/DiaryStore.swift,
+				Stores/ThumbnailPrefetcher.swift,
 				Stores/ThumbnailStore.swift,
 				Stores/WeatherService.swift,
 				Views/BlockPickerView.swift,
@@ -55,14 +61,18 @@
 		9853D9322E66F00200FDE0CB /* Exceptions for "iOS" folder in "Vineyard Diary" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				App/InteractionProbeView.swift,
 				App/VineyardDiaryiOSApp.swift,
+				Features/SharedImporter.swift,
 			);
 			target = 98B09D512E59B3F6007EF040 /* Vineyard Diary */;
 		};
 		9853D9342E66F00700FDE0CB /* Exceptions for "iOS" folder in "VineyardDiary iOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				App/InteractionProbeView.swift,
 				App/VineyardDiaryiOSApp.swift,
+				Features/SharedImporter.swift,
 			);
 			target = 9853D8FA2E66D28A00FDE0CB /* VineyardDiary iOS */;
 		};
@@ -279,7 +289,7 @@
 				CODE_SIGN_ENTITLEMENTS = "VineyardDiary iOS/VineyardDiary iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202509041000;
+				CURRENT_PROJECT_VERSION = 202509051545;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -316,7 +326,7 @@
 				CODE_SIGN_ENTITLEMENTS = "VineyardDiary iOS/VineyardDiary iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202509041000;
+				CURRENT_PROJECT_VERSION = 202509051545;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -474,7 +484,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202509041000;
+				CURRENT_PROJECT_VERSION = 202509051545;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -510,7 +520,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202509041000;
+				CURRENT_PROJECT_VERSION = 202509051545;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

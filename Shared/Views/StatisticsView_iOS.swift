@@ -42,8 +42,10 @@ struct StatisticsView: View {
                 tempsSection()
                 sunshineDailySection()
                 precipitationSection()
-                activeTempSection()
-                sunshineVarietySection()   // ← 追加
+                GDDPanel(selectedYear: $selectedYear, selectedBlock: $selectedBlock)        // //4) 有効積算温度 (eGDD版）
+                    .environmentObject(store)
+                    .environmentObject(weather)
+                sunshineVarietySection()
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 20)
@@ -52,6 +54,25 @@ struct StatisticsView: View {
             if selectedBlock.isEmpty { selectedBlock = store.settings.blocks.first?.name ?? "" }
             if !availableYears().contains(selectedYear) {
                 selectedYear = availableYears().max() ?? selectedYear
+            }
+        }
+        
+        // データ更新時に選択が無効化された場合も自動矯正
+        .onAppear {
+            if selectedBlock.isEmpty { selectedBlock = store.settings.blocks.first?.name ?? "" }
+            if !availableYears().contains(selectedYear) {
+                selectedYear = availableYears().max() ?? selectedYear
+            }
+        }
+        .onChange(of: store.settings.blocks) { _ in
+            if selectedBlock.isEmpty || !store.settings.blocks.map(\.name).contains(selectedBlock) {
+                selectedBlock = store.settings.blocks.first?.name ?? ""
+            }
+        }
+        .onChange(of: weather.data) { _ in
+            // 年候補が変わったときの保険（必要なら）
+            if !availableYears().contains(selectedYear) {
+                selectedYear = availableYears().max() ?? Calendar.current.component(.year, from: Date())
             }
         }
         .navigationTitle("統計")
@@ -273,20 +294,25 @@ struct StatisticsView: View {
         }
     }
 
+   /*
     // 4) 有効積算温度（4/1〜、Tmax≥10 の日の Tmax を累積）
     private func activeTempSection() -> some View {
         let atPts = activeTempPoints()
         return card(title: "有効積算温度（4/1〜、Tmax≥10）") {
             Chart {
-                ForEach(atPts) { p in
-                    if let y = p.y {
-                        LineMark(
-                            x: .value("日付", p.d, unit: .day),
-                            y: .value("積算温度", y)
-                        )
-                        .interpolationMethod(.linear)
-                    }
-                }
+                let method = store.settings.gddMethod
+                let rule   = store.settings.gddStartRule
+
+                let daily = GDDSeriesBuilder.dailySeries(
+                    store: store, weather: weather,
+                    year: year,
+                    block: selectedBlock,
+                    variety: nil,
+                    method: method,
+                    rule: rule,
+                    base: 10.0
+                )
+                let cumulative = GDDSeriesBuilder.cumulativeSeries(from: daily)
                 if let d = hoverAT, let v = valueOn(d, from: atPts) {
                     RuleMark(x: .value("日付", d, unit: .day))
                         .foregroundStyle(.secondary)
@@ -318,7 +344,7 @@ struct StatisticsView: View {
             }
         }
     }
-
+*/
     // 5) 積算日照（品種別・満開以降）← 追加
     private func sunshineVarietySection() -> some View {
         let series = cumulativeSunshineVarietySeries()
@@ -562,4 +588,25 @@ fileprivate func bubble<Content: View>(@ViewBuilder _ content: () -> Content) ->
         )
         .padding(8)
 }
+
+// eGDD View
+/*
+private struct GDDSection_iOS: View {
+    @EnvironmentObject var store: DiaryStore
+    @EnvironmentObject var weather: DailyWeatherStore
+    
+    let selectedYear: Int
+    let selectedBlock: String
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                GDDPanel(selectedYear: selectedYear, selectedBlock: selectedBlock)
+                    .environmentObject(store)
+                    .environmentObject(weather)
+            }
+        }
+    }
+}
+ */
 #endif

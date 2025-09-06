@@ -12,23 +12,28 @@ struct VineyardDiaryApp: App {
                 .environmentObject(store)
                 .environmentObject(weather)
                 .task {
+                    // 起動時：キャッシュ読み込み → 今年分バックフィル（UIを塞がない）
                     weather.load()
-                    await backfillDailyWeatherAndRefreshEntries(store: store, weather: weather)
+                    Task.detached(priority: .utility) {
+                        await backfillDailyWeatherAndRefreshEntries(store: store, weather: weather)
+                    }
                 }
         }
         .commands {
             CommandMenu("データ") {
-                
+
                 // 年初〜今日まで、全区画の気象データを再取得
                 Button("今年の気象データを再取得（全区画）") {
-                    Task { await backfillDailyWeatherAndRefreshEntries(store: store, weather: weather) }
+                    Task.detached(priority: .utility) {
+                        await backfillDailyWeatherAndRefreshEntries(store: store, weather: weather)
+                    }
                 }
                 .keyboardShortcut("R", modifiers: [.command, .shift]) // ⌘⇧R
 
-                // macOS メニューなどから
+                // iOS 共有パッケージを書き出し
                 Button("iOSと共有データを書き出し…") {
-                        Task { await SharedPackageExporter.exportSharedPackageWithPanel(store: store, weather: weather) }
-                    }
+                    Task { await SharedPackageExporter.exportSharedPackageWithPanel(store: store, weather: weather) }
+                }
 
                 // バックアップ作成
                 Button("バックアップを作成") {
@@ -63,7 +68,8 @@ struct VineyardDiaryApp: App {
                 }
 
                 Divider()
-
+                
+   
                 // 既存の CSV エクスポート
                 Button("CSVエクスポート") {
                     Task { @MainActor in
@@ -76,10 +82,19 @@ struct VineyardDiaryApp: App {
                     }
                 }
                 .keyboardShortcut("E", modifiers: [.command, .shift]) // ⌘⇧E
+                
+                // 追加: 設定だけ復元
+                Button("バックアップから『設定だけ』復元") {
+                    Task { @MainActor in
+                        QuickRestoreSettings.restoreSettingsFromBackupWithPanel(store: store)
+                    }
+                }
+                    
             }
         }
 
-        Settings {
+        // ここは "Settings" シーンと自作型 Settings の衝突を避けるために SwiftUI. を明示
+        SwiftUI.Settings {
             SettingsRootView()
                 .environmentObject(store)
                 .environmentObject(weather)

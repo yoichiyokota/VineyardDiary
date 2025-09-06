@@ -6,4 +6,7 @@ struct VineyardSettingsFile: Codable {
     var blocks: [BlockSetting]
     var varieties: [VarietySetting]
     var stages: [StageSetting]
+    // 追加（任意）：キーが無い古いJSONでも decodeOK
+    var gddStartRule: GDDStartRule? = nil
+    var gddMethod: GDDMethod? = nil
 }

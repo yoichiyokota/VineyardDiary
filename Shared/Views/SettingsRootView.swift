@@ -8,7 +8,6 @@ import UIKit
 import AudioToolbox
 #endif
 
-
 struct SettingsRootView: View {
     @EnvironmentObject var store: DiaryStore
 
@@ -43,6 +42,7 @@ private struct BlocksPane: View {
                 } label: { Label("追加", systemImage: "plus") }
             }
 
+            #if os(macOS)
             Table(store.settings.blocks) {
                 TableColumn("名前") { b in
                     HStack {
@@ -57,19 +57,38 @@ private struct BlocksPane: View {
                         .buttonStyle(.borderless)
                     }
                 }
-
                 TableColumn("緯度（DMS）") { b in
                     DMSInputField(value: bindingForLat(b), isLat: true, placeholder: "36°46'01.7\"N")
                 }
-
                 TableColumn("経度（DMS）") { b in
                     DMSInputField(value: bindingForLon(b), isLat: false, placeholder: "138°20'13.2\"E")
                 }
             }
+            #else
+            List {
+                ForEach(store.settings.blocks) { b in
+                    HStack(spacing: 12) {
+                        TextField("名前", text: bindingForName(b))
+                        DMSInputField(value: bindingForLat(b), isLat: true,  placeholder: "36°46'01.7\"N")
+                        DMSInputField(value: bindingForLon(b), isLat: false, placeholder: "138°20'13.2\"E")
+                        Spacer()
+                        Button(role: .destructive) {
+                            if let i = index(of: b) {
+                                store.settings.blocks.remove(at: i)
+                                store.saveSettings()
+                            }
+                        } label: { Image(systemName: "minus.circle") }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+            #endif
+        }
+        .onChange(of: store.settings.blocks) { _ in
+            store.saveSettings()
         }
     }
 
-    // MARK: - バインディング生成
     private func index(of b: BlockSetting) -> Int? {
         store.settings.blocks.firstIndex(where: { $0.id == b.id })
     }
@@ -111,7 +130,7 @@ private struct BlocksPane: View {
     }
 }
 
-// MARK: - 品種設定（従来どおり）
+// MARK: - 品種設定
 private struct VarietiesPane: View {
     @EnvironmentObject var store: DiaryStore
 
@@ -157,90 +176,97 @@ private struct VarietiesPane: View {
     }
 }
 
-// MARK: - DMS入力フィールド（Double? <-> DMS文字列）
+// MARK: - DMS入力フィールド（DD(Double?) <-> DMS文字列 with N/E/S/W）
+// ※ ddToDMSWithHemisphere / dmsToDDWithHemisphere は DMS.swift に実装済み前提。
+//   （このファイルでは再定義しないでください：重複を避けるため）
 private struct DMSInputField: View {
     @Binding var value: Double?
     let isLat: Bool
     var placeholder: String
 
-    @State private var text: String = ""
+    @State private var text: String
+    @State private var error: String? = nil
+    @FocusState private var focused: Bool
+
+    init(value: Binding<Double?>, isLat: Bool, placeholder: String) {
+        self._value = value
+        self.isLat = isLat
+        self.placeholder = placeholder
+        if let v = value.wrappedValue {
+            _text = State(initialValue: ddToDMSWithHemisphere(v, isLat: isLat))
+        } else {
+            _text = State(initialValue: "")
+        }
+    }
 
     var body: some View {
-        TextField(placeholder, text: $text, onCommit: commit)
-            .textFieldStyle(.roundedBorder)
-            .onAppear { syncFromModel() }
-            .onChange(of: value) { _ in syncFromModel() }
-            .onSubmit { commit() }
-            .frame(maxWidth: .infinity)
-            .help(isLat
-                  ? "緯度（N/S）。例: 36°46'01.7\"N"
-                  : "経度（E/W）。例: 138°20'13.2\"E")
-    }
+        VStack(alignment: .leading, spacing: 4) {
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(.body, design: .monospaced))
+                .focused($focused)
+                .onSubmit { validateAndCommit() }
+                .onChange(of: focused) { isFocused in
+                    if !isFocused { validateAndCommit() }
+                }
+                .onChange(of: value) { _ in
+                    guard !focused else { return }
+                    if let v = value {
+                        text = ddToDMSWithHemisphere(v, isLat: isLat)
+                    } else {
+                        text = ""
+                    }
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(error == nil ? Color.clear : Color.red.opacity(0.6), lineWidth: 1)
+                )
 
-    private func syncFromModel() {
-        if let v = value {
-            text = ddToDMS(v)   // ← DMS.swift の関数を利用
-        } else {
-            text = ""
+            if let msg = error {
+                Text(msg).font(.caption).foregroundStyle(.red)
+            }
         }
+        .frame(maxWidth: .infinity)
+        .help(isLat
+              ? "例: 36°46'01.7\"N（北緯N/南緯Sも可）／-36°46'01.7\" も可"
+              : "例: 138°20'13.2\"E（東経E/西経Wも可）／-138°20'13.2\" も可")
     }
 
-    private func commit() {
+    private func validateAndCommit() {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
+        guard !trimmed.isEmpty else {
             value = nil
+            error = nil
             return
         }
-        if let dd = dmsToDD(trimmed) {// ← DMS.swift の関数を利用
+        switch dmsToDDWithHemisphere(trimmed, isLat: isLat) {
+        case .success(let dd):
+            if isLat && (dd < -90 || dd > 90) {
+                error = "緯度は -90〜90 の範囲で入力してください。"
+                playFeedbackError(); return
+            }
+            if !isLat && (dd < -180 || dd > 180) {
+                error = "経度は -180〜180 の範囲で入力してください。"
+                playFeedbackError(); return
+            }
             value = dd
-            text = ddToDMS(dd)       // 正規化して表示
-        } else {
-            playFeedback() // 入力が解釈できない場合
+            text = ddToDMSWithHemisphere(dd, isLat: isLat) // 正規化表示
+            error = nil
+        case .failure(let err):
+            error = err.localizedDescription
+            playFeedbackError()
         }
     }
 }
 
-/// 10進度 (DD) → 度分秒文字列（例: 35°12'34.50" / -139°44'00.00"）
-func ddToDMS(_ dd: Double) -> String {
-    let sign = dd < 0 ? -1.0 : 1.0
-    let absVal = abs(dd)
-    let deg = Int(absVal.rounded(.down))
-    let minFloat = (absVal - Double(deg)) * 60.0
-    let min = Int(minFloat.rounded(.down))
-    let sec = (minFloat - Double(min)) * 60.0
-    let prefix = sign < 0 ? "-" : ""
-    return String(format: "%@%d°%02d'%05.2f\"", prefix, deg, min, sec)
-}
-
-/// 度分秒文字列 → 10進度 (DD)
-/// 受け入れ例: "35°12'34.5\"", "-139 44 0", "35d12m34.5s"
-func dmsToDD(_ s: String) -> Double? {
-    // 許容：度,分,秒 を区切る記号 / 空白 を広めに対応
-    let pattern = #"^\s*([+-]?\d+)[°d\s]+(\d+)?['m\s]*([0-9.]+)?["s\s]*$"#
-    guard let re = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
-    let ns = s as NSString
-    guard let m = re.firstMatch(in: s, options: [], range: NSRange(location: 0, length: ns.length)) else { return nil }
-    func group(_ i: Int) -> String? {
-        let r = m.range(at: i)
-        guard r.location != NSNotFound else { return nil }
-        return ns.substring(with: r)
-    }
-    guard let degStr = group(1), let deg = Double(degStr) else { return nil }
-    let min = Double(group(2) ?? "0") ?? 0
-    let sec = Double(group(3) ?? "0") ?? 0
-    let absVal = abs(deg) + min/60.0 + sec/3600.0
-    return deg < 0 ? -absVal : absVal
-}
-
-func playFeedback() {
+func playFeedbackError() {
     #if os(macOS)
-    // システム標準のビープでOK（または "Glass" など）
     NSSound.beep()
     #else
     if #available(iOS 10.0, *) {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
     } else {
-        AudioServicesPlaySystemSound(1103) // 旧来のシステム音
+        AudioServicesPlaySystemSound(1053)
     }
     #endif
 }

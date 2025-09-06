@@ -30,9 +30,14 @@
 		9853D9152E66DC9900FDE0CB /* Exceptions for "Shared" folder in "VineyardDiary iOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Features/DMS.swift,
 				Features/SharedFolderBookmark.swift,
 				Features/SharedFolderPickerButton.swift,
 				Features/WeatherBackfill.swift,
+				Logic/EGDD.swift,
+				Logic/GDD.swift,
+				Logic/GDDTypes.swift,
+				Models/AppSettings.swift,
 				Models/BlockMaster.swift,
 				Models/DiaryEntry.swift,
 				Models/PhotosIndex.swift,
@@ -48,6 +53,7 @@
 				Views/ContentView.swift,
 				Views/EntryEditorView_iOS.swift,
 				Views/EntryRow.swift,
+				Views/GDDPanel.swift,
 				Views/SettingsRootView.swift,
 				Views/StageSettingsView.swift,
 				Views/StatisticsView_iOS.swift,

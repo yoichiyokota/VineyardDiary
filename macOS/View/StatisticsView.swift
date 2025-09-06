@@ -35,7 +35,12 @@ struct StatisticsView: View {
                     tempsSection()              // 1) 最高・最低（赤/青、中央値なし）
                     sunshineDailySection()      // 2) 日照（棒）＋ホバー
                     precipitationSection()      // 3) 降水（棒）＋ホバー
-                    activeTempSection()         // 4) 有効積算温度（4/1〜）＋ホバー
+                    GDDPanel(
+                        selectedYear: $selectedYear,
+                        selectedBlock: $selectedBlock
+                    )          // 4) 積算温度
+                        .environmentObject(store)
+                        .environmentObject(weather)
                     sunshineVarietySection()    // 5) 積算日照（品種別・満開以降）＋ホバー
                 }
                 .padding(.horizontal, 12)
@@ -43,8 +48,32 @@ struct StatisticsView: View {
             }
         }
         .onAppear(perform: initialSelects)
+        .onChange(of: weather.data) { _ in initialSelects() }  // ← これを追加
+
+        
+        // データ更新時に選択が無効化された場合も自動矯正
+        .onAppear {
+            if selectedBlock.isEmpty { selectedBlock = store.settings.blocks.first?.name ?? "" }
+            if !availableYears().contains(selectedYear) {
+                selectedYear = availableYears().max() ?? selectedYear
+            }
+        }
+        .onChange(of: store.settings.blocks) { _ in
+            if selectedBlock.isEmpty || !store.settings.blocks.map(\.name).contains(selectedBlock) {
+                selectedBlock = store.settings.blocks.first?.name ?? ""
+            }
+        }
+        .onChange(of: weather.data) { _ in
+            // 年候補が変わったときの保険（必要なら）
+            if !availableYears().contains(selectedYear) {
+                selectedYear = availableYears().max() ?? Calendar.current.component(.year, from: Date())
+            }
+        }
+
         .frame(minWidth: 1100, minHeight: 760)
     }
+    
+    
 
     // MARK: - Header（年は4桁、カンマ無し：verbatimで強制）
     private var header: some View {
@@ -62,15 +91,19 @@ struct StatisticsView: View {
                 .labelsHidden()
                 .frame(width: 110)
             }
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Text("区画")
                 Picker("", selection: $selectedBlock) {
-                    ForEach(availableBlocks(), id: \.self) { name in
-                        Text(name).tag(name)
+                    Text("すべて").tag("") // 空は全区画
+                    ForEach(store.settings.blocks, id: \.id) { b in
+                        // 表示は b.name（中に "(630m)" を含んでいてもOK）
+                        // ただし tag は “生の name” を渡す
+                        Text(b.name).tag(b.name)
                     }
                 }
                 .labelsHidden()
-                .frame(width: 220)
+                .pickerStyle(.menu)
+                .fixedSize()
             }
         }
         .padding(.horizontal, 12)
@@ -269,59 +302,7 @@ struct StatisticsView: View {
         }
     }
 
-    // 4) 有効積算温度（4/1〜、Tmax≥10 の日の Tmax を累積）
-    private func activeTempSection() -> some View {
-        let atPts = activeTempPoints()
-        return SectionCard(title: "有効積算温度（4/1〜、Tmax≥10）") {
-            Chart {
-                ForEach(atPts) { p in
-                    if let y = p.y {
-                        LineMark(
-                            x: .value("日付", p.date, unit: .day),
-                            y: .value("積算温度", y)
-                        )
-                        .interpolationMethod(.linear)
-                        .foregroundStyle(.orange)
-                    }
-                }
-                if let hd = hoverDateAT, let v = valueOn(date: hd, from: atPts) {
-                    RuleMark(x: .value("日付", hd, unit: .day))
-                        .foregroundStyle(.secondary)
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [3,3]))
-                    PointMark(x: .value("日付", hd, unit: .day), y: .value("積算温度", v))
-                        .foregroundStyle(.orange)
-                }
-            }
-            .chartXAxis {
-                AxisMarks(values: .stride(by: .month)) { _ in
-                    AxisGridLine()
-                    AxisValueLabel(format: .dateTime.month(.abbreviated))
-                }
-            }
-            .frame(minHeight: 220)
-            .chartOverlay { proxy in
-                GeometryReader { geo in
-                    Rectangle().fill(.clear).contentShape(Rectangle())
-                        .onContinuousHover { phase in
-                            switch phase {
-                            case .active(let pos):
-                                if let d = xToDate(pos: pos, proxy: proxy, geo: geo) {
-                                    hoverDateAT = startOfDay(d)
-                                }
-                            case .ended:
-                                hoverDateAT = nil
-                            }
-                        }
-                }
-            }
-            .overlay(alignment: .topLeading) {
-                if let hd = hoverDateAT, let v = valueOn(date: hd, from: atPts) {
-                    bubble { Text("\(dateLabel(hd))  積算温度 \(String(format: "%.0f", v))").font(.caption) }
-                }
-            }
-        }
-    }
-
+    
     // 5) 積算日照（品種別・満開以降）
     private func sunshineVarietySection() -> some View {
         let series = cumulativeSunshineVarietySeries()
@@ -586,5 +567,30 @@ fileprivate let yyyyMMddDF: DateFormatter = {
     df.dateFormat = "yyyy-MM-dd"
     return df
 }()
+
+// eGDD View
+/*
+private struct GDDSection_macOS: View {
+    @EnvironmentObject var store: DiaryStore
+    @EnvironmentObject var weather: DailyWeatherStore
+    
+    let selectedYear: Int
+    let selectedBlock: String
+    
+    @State private var method: GDDMethod = .classicBase10
+    @State private var rule: GDDStartRule = .budbreakOrApril1
+    
+    @State private var series: [GDDPoint] = []
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            GDDPanel(selectedYear: selectedYear, selectedBlock: selectedBlock)
+                .environmentObject(store)
+                .environmentObject(weather)
+            
+        }
+    }
+}
+ */
 
 #endif

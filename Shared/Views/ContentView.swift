@@ -94,6 +94,14 @@ struct ContentView: View {
                 rebuildYearAndBlockOptions()
                 if selectedYear == 0, let first = availableYears.first { selectedYear = first }
             }
+            // 既存の onAppear の近くに追加
+            .onChange(of: store.settings.blocks.map { $0.name }) { _ in
+                rebuildYearAndBlockOptions()
+                // 選択値が候補に無い場合は「すべて」に戻す
+                if !blockOptions.contains(selectedBlock) {
+                    selectedBlock = ""
+                }
+            }
             .confirmationDialog(
                 "この日記を削除しますか？",
                 isPresented: Binding(
@@ -271,6 +279,14 @@ struct ContentView: View {
         .onAppear {
             rebuildYearAndBlockOptions()
             if selectedYear == 0, let first = availableYears.first { selectedYear = first }
+        }
+        // 既存の onAppear の近くに追加
+        .onChange(of: store.settings.blocks.map { $0.name }) { _ in
+            rebuildYearAndBlockOptions()
+            // 選択値が候補に無い場合は「すべて」に戻す
+            if !blockOptions.contains(selectedBlock) {
+                selectedBlock = ""
+            }
         }
         .confirmationDialog(
             "この日記を削除しますか？",

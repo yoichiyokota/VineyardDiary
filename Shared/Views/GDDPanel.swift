@@ -8,6 +8,9 @@ struct GDDPanel: View {
     @Binding var selectedYear: Int       // ← 変更: Binding
     @Binding var selectedBlock: String   // ← 変更: Binding
 
+    // ★ 追加: 親ビューから横軸ドメインを渡せるように
+    let xDomain: ClosedRange<Date>?
+    
     @State private var method: GDDMethod = .effective
     @State private var startRule: GDDStartRule = .autoBudbreakOrApril1
 
@@ -90,6 +93,7 @@ struct GDDPanel: View {
                         }
                     }
                 }
+                .chartXScale(domain: xDomain ?? inferredDomain())  // ★追加
                 .chartYScale(domain: niceYDomain())
                 .frame(minHeight: 240)
 
@@ -215,6 +219,10 @@ struct GDDPanel: View {
             accum = accumSeries
         }
         
+        let today = Calendar.current.startOfDay(for: Date())
+        daily = dailySeries.filter { $0.day <= today }
+        accum = GDDSeriesBuilder.cumulativeSeries(from: daily)
+        
 #if DEBUG
 print("[GDD] year=\(selectedYear) block=\(canonicalBlockName(from: selectedBlock)) method=\(method) rule=\(startRule)")
 print("[GDD] daily=\(dailySeries.count) accum=\(accumSeries.count)")
@@ -256,5 +264,18 @@ print("[GDD] daily=\(dailySeries.count) accum=\(accumSeries.count)")
             return hit.name
         }
         return display
+    }
+    
+    // ファイル末尾近くに補助関数を追加
+    private func inferredDomain() -> ClosedRange<Date> {
+        // accum か daily があればその範囲、なければ年始〜年末
+        if let first = (daily.first ?? accum.first)?.day,
+           let last  = (daily.last  ?? accum.last )?.day {
+            return Calendar.current.startOfDay(for: first)...Calendar.current.startOfDay(for: last)
+        }
+        let cal = Calendar.current
+        let jan1 = cal.date(from: DateComponents(year: selectedYear, month: 1, day: 1))!
+        let dec31 = cal.date(from: DateComponents(year: selectedYear, month: 12, day: 31))!
+        return jan1...min(Date(), dec31)
     }
 }

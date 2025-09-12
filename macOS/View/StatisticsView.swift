@@ -37,7 +37,8 @@ struct StatisticsView: View {
                     precipitationSection()      // 3) 降水（棒）＋ホバー
                     GDDPanel(
                         selectedYear: $selectedYear,
-                        selectedBlock: $selectedBlock
+                        selectedBlock: $selectedBlock,
+                        xDomain: xDomainApr1ToToday()
                     )          // 4) 積算温度
                         .environmentObject(store)
                         .environmentObject(weather)
@@ -158,6 +159,7 @@ struct StatisticsView: View {
                         .foregroundStyle(.blue)
                 }
             }
+            .chartXScale(domain: xDomainForYear(selectedYear)) // ★これを追加
             .chartLegend(.hidden) // 凡例は不要なら隠す
             .chartXAxis {
                 AxisMarks(values: .stride(by: .month)) { _ in
@@ -220,6 +222,7 @@ struct StatisticsView: View {
                         .foregroundStyle(.yellow)
                 }
             }
+            .chartXScale(domain: xDomainForYear(selectedYear)) // ★これを追加
             .chartXAxis {
                 AxisMarks(values: .stride(by: .month)) { _ in
                     AxisGridLine()
@@ -272,6 +275,7 @@ struct StatisticsView: View {
                         .foregroundStyle(.teal)
                 }
             }
+            .chartXScale(domain: xDomainForYear(selectedYear)) // ★これを追加
             .chartXAxis {
                 AxisMarks(values: .stride(by: .month)) { _ in
                     AxisGridLine()
@@ -332,6 +336,7 @@ struct StatisticsView: View {
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3,3]))
                 }
             }
+            .chartXScale(domain: xDomainApr1ToToday())
             .chartLegend(.visible)
             .chartXAxis {
                 AxisMarks(values: .stride(by: .month)) { _ in
@@ -508,6 +513,15 @@ struct StatisticsView: View {
         let day = startOfDay(date)
         return pts.first(where: { Calendar.current.isDate($0.date, inSameDayAs: day) })?.y
     }
+    
+    private func xDomainApr1ToToday() -> ClosedRange<Date> {
+        let cal = Calendar.current
+        let start = cal.date(from: DateComponents(year: selectedYear, month: 4, day: 1))!
+        // その区画・年の最後のデータ日（無ければ start）と “今日” の早い方まで
+        let lastData = dayMap().last?.0 ?? start
+        let end = min(cal.startOfDay(for: Date()), lastData)
+        return start...end
+    }
 
     private func xToDate(pos: CGPoint, proxy: ChartProxy, geo: GeometryProxy) -> Date? {
         let frame = geo[proxy.plotAreaFrame]
@@ -568,29 +582,14 @@ fileprivate let yyyyMMddDF: DateFormatter = {
     return df
 }()
 
-// eGDD View
-/*
-private struct GDDSection_macOS: View {
-    @EnvironmentObject var store: DiaryStore
-    @EnvironmentObject var weather: DailyWeatherStore
-    
-    let selectedYear: Int
-    let selectedBlock: String
-    
-    @State private var method: GDDMethod = .classicBase10
-    @State private var rule: GDDStartRule = .budbreakOrApril1
-    
-    @State private var series: [GDDPoint] = []
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            GDDPanel(selectedYear: selectedYear, selectedBlock: selectedBlock)
-                .environmentObject(store)
-                .environmentObject(weather)
-            
-        }
-    }
+// 年ごとの共通 xDomain を計算
+private func xDomainForYear(_ year: Int) -> ClosedRange<Date> {
+    let cal = Calendar.current
+    let start = cal.date(from: DateComponents(year: year, month: 1, day: 1))!
+    let endOfYear = cal.date(from: DateComponents(year: year, month: 12, day: 31))!
+    let end = min(Date(), endOfYear) // 今日を上限
+    return start...end
 }
- */
+
 
 #endif

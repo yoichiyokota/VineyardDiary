@@ -42,9 +42,13 @@ struct StatisticsView: View {
                 tempsSection()
                 sunshineDailySection()
                 precipitationSection()
-                GDDPanel(selectedYear: $selectedYear, selectedBlock: $selectedBlock)        // //4) 有効積算温度 (eGDD版）
-                    .environmentObject(store)
-                    .environmentObject(weather)
+                GDDPanel(
+                    selectedYear: $selectedYear,
+                    selectedBlock: $selectedBlock,
+                    xDomain: xDomainForSpan()
+                )
+                .environmentObject(store)
+                .environmentObject(weather)
                 sunshineVarietySection()
             }
             .padding(.horizontal, 12)
@@ -170,6 +174,7 @@ struct StatisticsView: View {
                         .foregroundStyle(.blue)
                 }
             }
+            .chartXScale(domain: xDomainForSpan())  // ★これを追加
             .chartLegend(.hidden)
             .chartXAxis {
                 AxisMarks(values: .stride(by: .month)) { _ in
@@ -224,6 +229,7 @@ struct StatisticsView: View {
                     PointMark(x: .value("日付", d, unit: .day), y: .value("日照", v))
                 }
             }
+            .chartXScale(domain: xDomainForSpan())  // ★これを追加
             .chartXAxis {
                 AxisMarks(values: .stride(by: .month)) { _ in
                     AxisGridLine()
@@ -269,6 +275,7 @@ struct StatisticsView: View {
                     PointMark(x: .value("日付", d, unit: .day), y: .value("降水", v))
                 }
             }
+            .chartXScale(domain: xDomainForSpan())  // ★これを追加
             .chartXAxis {
                 AxisMarks(values: .stride(by: .month)) { _ in
                     AxisGridLine()
@@ -374,6 +381,7 @@ struct StatisticsView: View {
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3,3]))
                 }
             }
+            .chartXScale(domain: xDomainForSpan())  // ★これを追加
             .chartLegend(.visible)
             .chartXAxis {
                 AxisMarks(values: .stride(by: .month)) { _ in
@@ -563,6 +571,31 @@ struct StatisticsView: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(.regularMaterial))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.15)))
     }
+    
+    private func xDomainForSpan() -> ClosedRange<Date> {
+        let cal = Calendar.current
+        let dm  = dayMap()
+        let lastData = dm.last?.0
+            ?? cal.date(from: DateComponents(year: selectedYear, month: 12, day: 31))!
+        let today = cal.startOfDay(for: Date())
+        let end = min(today, lastData)
+
+        switch span {
+        case .y1:
+            // ★今年の1/1 → 今日（前年を含めない）
+            let start = cal.date(from: DateComponents(year: selectedYear, month: 1, day: 1))!
+            return start...end
+
+        case .m3:
+            let start = cal.date(byAdding: .day, value: -91, to: end)! // 92日窓
+            return start...end
+
+        case .m1:
+            let start = cal.date(byAdding: .day, value: -30, to: end)! // 31日窓
+            return start...end
+        }
+    }
+    
 }
 
 // yyyy-MM-dd（DailyWeather のキー）
@@ -589,24 +622,4 @@ fileprivate func bubble<Content: View>(@ViewBuilder _ content: () -> Content) ->
         .padding(8)
 }
 
-// eGDD View
-/*
-private struct GDDSection_iOS: View {
-    @EnvironmentObject var store: DiaryStore
-    @EnvironmentObject var weather: DailyWeatherStore
-    
-    let selectedYear: Int
-    let selectedBlock: String
-
-    var body: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 12) {
-                GDDPanel(selectedYear: selectedYear, selectedBlock: selectedBlock)
-                    .environmentObject(store)
-                    .environmentObject(weather)
-            }
-        }
-    }
-}
- */
 #endif

@@ -1,12 +1,12 @@
 import Foundation
 
 // 既存フォーマットはそのまま
-struct BackupPayload: Codable {
-    var settings: AppSettings
-    var entries: [DiaryEntry]
-    /// blockName -> dateISO(yyyy-MM-dd) -> DailyWeather
-    var dailyWeather: [String: [String: DailyWeather]]
-}
+//struct BackupPayload: Codable {
+//    var settings: AppSettings
+//    var entries: [DiaryEntry]
+//    /// blockName -> dateISO(yyyy-MM-dd) -> DailyWeather
+//    var dailyWeather: [String: [String: DailyWeather]]
+//}
 
 enum BackupManager {
     // ベース名（拡張子はここでは付けない）

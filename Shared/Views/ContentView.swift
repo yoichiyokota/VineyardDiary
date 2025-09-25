@@ -71,6 +71,7 @@ struct ContentView: View {
                     ForEach(entries) { entry in
                         Button { openEditor(entry) } label: {
                             CompactEntryRow(entry: entry, weather: weather)
+                                .environmentObject(thumbs)          // ★ 追加
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -300,6 +301,13 @@ struct ContentView: View {
         }
     }
     #endif
+    
+#if os(macOS)
+@MainActor
+private func restoreFromBackupUnified() {
+    BackupRestoreUI.runUnifiedRestore(store: store, weather: weather)
+}
+#endif
 
     // ============================================================
     // 共通 UI（macOS 行）
@@ -360,7 +368,7 @@ struct ContentView: View {
                 .background(Color.gray.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            EntryRow(entry: entry)
+            EntryRow(entry: entry, showLeadingThumbnail: false)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 4) {
@@ -512,6 +520,13 @@ struct ContentView: View {
         editorWindows.append(win)
     }
     private func openStatisticsWindow() {
+        // ★ 統計を開く直前に最新化
+        Task { @MainActor in
+            // 既存の日記データに対して欠損ぶんを取得・追記
+            weather.load()  // キャッシュ読み
+            await backfillDailyWeatherAndRefreshEntries(store: store, weather: weather)
+        }
+        
         let win = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1100, height: 760),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -562,7 +577,9 @@ struct ContentView: View {
 // 既存
 fileprivate extension View {
     func eraseToAnyView() -> AnyView { AnyView(self) }
+    
 }
+
 
 #if os(iOS)
 // iOS: JSON FileDocument（必要なら将来のインポート/エクスポートで再利用）
@@ -590,10 +607,11 @@ struct JSONDocument: FileDocument {
 #endif
 
 #if os(iOS)
-// iOS: コンパクト行
+// iOS: コンパクト行（サムネ対応 + フォールバック）
 private struct CompactEntryRow: View {
     let entry: DiaryEntry
     @ObservedObject var weather: DailyWeatherStore
+    @EnvironmentObject var thumbs: ThumbnailStore
 
     private static let dayFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -604,13 +622,10 @@ private struct CompactEntryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.1))
-                Image(systemName: "photo")
-                    .imageScale(.small)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(width: 56, height: 42)
+            // 写真サムネ
+            thumbView()
+                .frame(width: 56, height: 42)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
@@ -644,6 +659,58 @@ private struct CompactEntryRow: View {
         .padding(.vertical, 6)
     }
 
+    // MARK: - サムネイルビュー（サムネ→元画像フォールバック）
+    @ViewBuilder
+    private func thumbView() -> some View {
+        // まずは「元画像っぽい名前」を優先的に採用（*_thumb や -150x150 を避ける）
+        let name = primaryPhotoName()
+
+        if let name,
+           let img = thumbs.thumbnail(for: name) {
+            // ThumbnailStore が作ってくれた縮小画像
+            Image(uiImage: img).resizable().scaledToFill()
+        } else if let name {
+            // フォールバック：サムネが未生成/見つからない場合に元画像を直接読み込み
+            let originalURL = URL.documentsDirectory.appendingPathComponent(name)
+            if let raw = UIImage(contentsOfFile: originalURL.path) {
+                Image(uiImage: raw).resizable().scaledToFill()
+            } else {
+                placeholder
+            }
+        } else {
+            placeholder
+        }
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.1))
+            Image(systemName: "photo")
+                .imageScale(.small)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - “元画像”名の抽出（サムネ名を除外）
+    private func primaryPhotoName() -> String? {
+        guard !entry.photos.isEmpty else { return nil }
+        // サムネっぽいものを除外して最初の1枚を選ぶ
+        if let original = entry.photos.first(where: { !isThumbName($0) }) {
+            return original
+        }
+        // 全部サムネ名しか無い場合は先頭を採用
+        return entry.photos.first
+    }
+
+    private func isThumbName(_ name: String) -> Bool {
+        let lower = name.lowercased()
+        if lower.contains("/thumb/") || lower.contains("/thumbs/") || lower.contains("/.thumbs/") { return true }
+        if lower.contains("_thumb.") || lower.contains("-thumb.") || lower.contains(".thumb.") { return true }
+        if lower.range(of: #"-\d{2,4}x\d{2,4}\."#, options: .regularExpression) != nil { return true }
+        return false
+    }
+
+    // MARK: - Weather labels（既存）
     private func tempLabel(for entry: DiaryEntry) -> String? {
         let day = Calendar.current.startOfDay(for: entry.date)
         if let w = weather.get(block: entry.block, date: day),

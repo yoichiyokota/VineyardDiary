@@ -59,6 +59,11 @@ enum SharedImporter {
         if let data = try? Data(contentsOf: entriesURL),
            let file = try? decoder.decode(VineyardDiaryFile.self, from: data) {
             store.entries = file.entries
+            
+            // ← ここを追加：参照される写真だけ iOS ドキュメントへコピー
+            if fm.fileExists(atPath: photosDirURL.path) {
+                copyReferencedPhotosIfNeeded(from: photosDirURL, entries: store.entries)
+            }
         } else {
             print("⚠️ entries.json の読み込みに失敗（存在しない/未ダウンロード/形式不正）")
         }
@@ -116,6 +121,42 @@ enum SharedImporter {
                 // まだ読み取れない → 少し待つ
             }
             RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1))
+        }
+    }
+    
+    // 参照されている写真（ファイル名配列）だけ、共有フォルダの Photos から
+    // アプリの Documents へコピー（存在しなければ）。小容量サムネ前提で全量OK。
+    @MainActor
+    private static func copyReferencedPhotosIfNeeded(from photosDirURL: URL, entries: [DiaryEntry]) {
+        let fm = FileManager.default
+        let doc = URL.documentsDirectory
+
+        // 参照されるファイル名（重複除去）
+        let names = Array(Set(entries.flatMap { $0.photos }))
+
+        for name in names {
+            let src = photosDirURL.appendingPathComponent(name)
+            let dst = doc.appendingPathComponent(name)
+
+            // 既にローカルにあればスキップ
+            if fm.fileExists(atPath: dst.path) { continue }
+
+            // iCloud 管理下なら個別ファイルのダウンロードも要求
+            ensureDownloadedIfNeeded(at: src)
+            waitUntilDownloaded(src, timeout: 3.0) // 少し長めに待つ
+
+            // まだ存在しなければコピーを試みる
+            do {
+                if fm.fileExists(atPath: src.path) {
+                    try fm.copyItem(at: src, to: dst)
+                } else {
+                    // 共有側にファイルが無い（または未ダウンロード）の場合はスキップ
+                    // 必要ならログ
+                    // print("⚠️ photo missing in shared: \(name)")
+                }
+            } catch {
+                print("⚠️ 写真コピー失敗 \(name):", error)
+            }
         }
     }
 }

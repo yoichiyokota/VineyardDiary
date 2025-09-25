@@ -1,12 +1,3 @@
-//
-//  ThumbnailPrefetcher.swift
-//  Vineyard Diary
-//
-//  Created by yoichi_yokota on 2025/09/05.
-//
-
-
-// ThumbnailPrefetcher.swift （新規／Shared配下でもOK）
 #if os(iOS)
 
 import Foundation

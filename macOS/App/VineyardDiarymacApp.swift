@@ -5,12 +5,14 @@ import SwiftUI
 struct VineyardDiaryApp: App {
     @StateObject private var store   = DiaryStore()
     @StateObject private var weather = DailyWeatherStore()
+    @StateObject private var thumbs  = ThumbnailStore()   // ★
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
                 .environmentObject(weather)
+                .environmentObject(thumbs)               // ★
                 .task {
                     // 起動時：キャッシュ読み込み → 今年分バックフィル（UIを塞がない）
                     weather.load()
@@ -21,14 +23,6 @@ struct VineyardDiaryApp: App {
         }
         .commands {
             CommandMenu("データ") {
-
-                // 年初〜今日まで、全区画の気象データを再取得
-                Button("今年の気象データを再取得（全区画）") {
-                    Task.detached(priority: .utility) {
-                        await backfillDailyWeatherAndRefreshEntries(store: store, weather: weather)
-                    }
-                }
-                .keyboardShortcut("R", modifiers: [.command, .shift]) // ⌘⇧R
 
                 // iOS 共有パッケージを書き出し
                 Button("iOSと共有データを書き出し…") {
@@ -53,18 +47,8 @@ struct VineyardDiaryApp: App {
 
                 // バックアップから復元
                 Button("バックアップから復元") {
-                    Task { @MainActor in
-                        do {
-                            let payload = try BackupManager.importBackupWithPanel()
-                            store.settings = payload.settings
-                            store.entries  = payload.entries
-                            weather.replaceAll(with: payload.dailyWeather)
-                            store.save()
-                            print("✅ 復元完了")
-                        } catch {
-                            print("❌ 復元失敗:", error)
-                        }
-                    }
+                    // モーダルで .vydbackup を選ばせ、「全データ / 設定だけ」を選択して実行
+                    BackupRestoreUI.runUnifiedRestore(store: store, weather: weather)
                 }
 
                 Divider()
@@ -81,14 +65,7 @@ struct VineyardDiaryApp: App {
                         }
                     }
                 }
-                .keyboardShortcut("E", modifiers: [.command, .shift]) // ⌘⇧E
-                
-                // 追加: 設定だけ復元
-                Button("バックアップから『設定だけ』復元") {
-                    Task { @MainActor in
-                        QuickRestoreSettings.restoreSettingsFromBackupWithPanel(store: store)
-                    }
-                }
+                .keyboardShortcut("E", modifiers: [.command, .shift])
                     
             }
         }

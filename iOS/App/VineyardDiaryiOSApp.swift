@@ -4,6 +4,7 @@ import SwiftUI
 struct VineyardDiaryiOSApp: App {
     @StateObject private var store = DiaryStore()
     @StateObject private var weather = DailyWeatherStore()
+    @StateObject private var thumbs  = ThumbnailStore()   // ← 追加
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -12,6 +13,8 @@ struct VineyardDiaryiOSApp: App {
                 ContentView()
                     .environmentObject(store)
                     .environmentObject(weather)
+                    .environmentObject(thumbs)               // ← 追加
+
             }
             // 起動時：共有取り込み → 天気ロード → バックフィル
             .task {

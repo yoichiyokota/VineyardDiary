@@ -21,6 +21,7 @@
 		98163A9E2E6831C600D536F8 /* Exceptions for "Shared" folder in "Vineyard Diary" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Features/ThumbnailKit.swift,
 				Stores/ThumbnailPrefetcher.swift,
 				Views/EntryEditorView_iOS.swift,
 				Views/StatisticsView_iOS.swift,
@@ -30,6 +31,7 @@
 		9853D9152E66DC9900FDE0CB /* Exceptions for "Shared" folder in "VineyardDiary iOS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Features/BackupManager.swift,
 				Features/DMS.swift,
 				Features/SharedFolderBookmark.swift,
 				Features/SharedFolderPickerButton.swift,
@@ -38,12 +40,14 @@
 				Logic/GDD.swift,
 				Logic/GDDTypes.swift,
 				Models/AppSettings.swift,
+				Models/BackupPayload.swift,
 				Models/BlockMaster.swift,
 				Models/DiaryEntry.swift,
 				Models/PhotosIndex.swift,
 				Models/VineyardDiaryFile.swift,
 				Models/VineyardSettingsFile.swift,
 				Models/YearRange.swift,
+				Stores/BackupRestoreUnified.swift,
 				Stores/DailyWeatherStore.swift,
 				Stores/DiaryStore.swift,
 				Stores/ThumbnailPrefetcher.swift,
@@ -84,6 +88,23 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		9895AF042E740FEF0001D1CE /* Exceptions for "Shared" folder in "Copy Bundle Resources" phase from "Vineyard Diary" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 98B09D502E59B3F6007EF040 /* Resources */;
+			membershipExceptions = (
+				Features/ThumbnailKit.swift,
+			);
+		};
+		9895AF052E740FEF0001D1CE /* Exceptions for "Shared" folder in "Copy Bundle Resources" phase from "VineyardDiary iOS" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 9853D8F92E66D28A00FDE0CB /* Resources */;
+			membershipExceptions = (
+				Features/ThumbnailKit.swift,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9853D8FC2E66D28A00FDE0CB /* VineyardDiary iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -94,7 +115,9 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				98163A9E2E6831C600D536F8 /* Exceptions for "Shared" folder in "Vineyard Diary" target */,
+				9895AF042E740FEF0001D1CE /* Exceptions for "Shared" folder in "Copy Bundle Resources" phase from "Vineyard Diary" target */,
 				9853D9152E66DC9900FDE0CB /* Exceptions for "Shared" folder in "VineyardDiary iOS" target */,
+				9895AF052E740FEF0001D1CE /* Exceptions for "Shared" folder in "Copy Bundle Resources" phase from "VineyardDiary iOS" target */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -295,7 +318,7 @@
 				CODE_SIGN_ENTITLEMENTS = "VineyardDiary iOS/VineyardDiary iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202509062015;
+				CURRENT_PROJECT_VERSION = 202509251912;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -309,7 +332,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.collduno.VineyardDiary-iOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -332,7 +355,7 @@
 				CODE_SIGN_ENTITLEMENTS = "VineyardDiary iOS/VineyardDiary iOS.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202509062015;
+				CURRENT_PROJECT_VERSION = 202509251912;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -346,7 +369,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.collduno.VineyardDiary-iOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -490,7 +513,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202509062015;
+				CURRENT_PROJECT_VERSION = 202509251912;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -526,7 +549,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202509062015;
+				CURRENT_PROJECT_VERSION = 202509251912;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

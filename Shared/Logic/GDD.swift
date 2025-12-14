@@ -71,11 +71,14 @@ enum GDDSeriesBuilder {
     }
 
     @MainActor
+    //private static func endDate(store: DiaryStore, year: Int, variety: String?) -> Date? {
+    //    if let harvest = firstStageDate(store: store, year: year, minStageCode: 40, variety: variety) {
+    //        return harvest
+    //    }
+    //    return Calendar.current.date(from: DateComponents(year: year, month: 12, day: 31))
+    //}
     private static func endDate(store: DiaryStore, year: Int, variety: String?) -> Date? {
-        if let harvest = firstStageDate(store: store, year: year, minStageCode: 40, variety: variety) {
-            return harvest
-        }
-        return Calendar.current.date(from: DateComponents(year: year, month: 12, day: 31))
+        Calendar.current.date(from: DateComponents(year: year, month: 12, day: 31))
     }
 
     @MainActor

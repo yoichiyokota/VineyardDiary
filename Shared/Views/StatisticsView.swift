@@ -1,33 +1,33 @@
-// Shared/Views/EntryEditorView.swift
+// Shared/Views/StatisticsView.swift
 // プラットフォーム振り分け用の統合ファイル
 
 import SwiftUI
 
-/// エントリエディタビュー
+/// 統計ビュー
 /// - iOS/macOSで異なる実装を自動的に振り分けます
 @MainActor
-struct EntryEditorView: View {
+struct StatisticsView: View {
     var body: some View {
         #if os(iOS)
-        EntryEditorView_iOS()
+        StatisticsView_iOS()
         #elseif os(macOS)
-        EntryEditorView_macOS()
+        StatisticsView_macOS()
         #else
-        UnsupportedEditorView()
+        UnsupportedStatisticsView()
         #endif
     }
 }
 
 // MARK: - 未対応プラットフォーム用
 
-private struct UnsupportedEditorView: View {
+private struct UnsupportedStatisticsView: View {
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
+            Image(systemName: "chart.xyaxis.line")
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
             
-            Text("エディタはこのプラットフォームでは利用できません")
+            Text("統計機能はこのプラットフォームでは利用できません")
                 .font(.headline)
             
             Text("iOS または macOS でご利用ください")
@@ -42,17 +42,20 @@ private struct UnsupportedEditorView: View {
 
 #if DEBUG
 #Preview("iOS") {
-    EntryEditorView()
-        .environmentObject(DiaryStore())
-        .environmentObject(DailyWeatherStore())
+    NavigationStack {
+        StatisticsView()
+            .environmentObject(DiaryStore())
+            .environmentObject(DailyWeatherStore())
+    }
 }
 
 #if os(macOS)
 #Preview("macOS") {
-    EntryEditorView()
+    StatisticsView()
         .environmentObject(DiaryStore())
         .environmentObject(DailyWeatherStore())
-        .frame(width: 900, height: 820)
+        .frame(width: 1100, height: 760)
 }
 #endif
 #endif
+

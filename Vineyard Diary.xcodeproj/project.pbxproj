@@ -23,8 +23,6 @@
 			membershipExceptions = (
 				Features/ThumbnailKit.swift,
 				Stores/ThumbnailPrefetcher.swift,
-				Views/EntryEditorView_iOS.swift,
-				Views/StatisticsView_iOS.swift,
 			);
 			target = 98B09D512E59B3F6007EF040 /* Vineyard Diary */;
 		};
@@ -53,14 +51,17 @@
 				Stores/ThumbnailPrefetcher.swift,
 				Stores/ThumbnailStore.swift,
 				Stores/WeatherService.swift,
+				ViewModels/ContentViewModel.swift,
+				ViewModels/EntryEditorViewModel.swift,
+				ViewModels/StatisticsViewModel.swift,
 				Views/BlockPickerView.swift,
 				Views/ContentView.swift,
-				Views/EntryEditorView_iOS.swift,
+				Views/EntryEditorView.swift,
 				Views/EntryRow.swift,
 				Views/GDDPanel.swift,
 				Views/SettingsRootView.swift,
 				Views/StageSettingsView.swift,
-				Views/StatisticsView_iOS.swift,
+				Views/StatisticsView.swift,
 				Views/Utils.swift,
 				Views/VarietySettingsView.swift,
 				Views/YearBlockFilterState.swift,
@@ -74,6 +75,10 @@
 				App/InteractionProbeView.swift,
 				App/VineyardDiaryiOSApp.swift,
 				Features/SharedImporter.swift,
+				Views/CompactEntryRow.swift,
+				Views/ContentView_iOS.swift,
+				Views/EntryEditorView_iOS.swift,
+				Views/StatisticsView_iOS.swift,
 			);
 			target = 98B09D512E59B3F6007EF040 /* Vineyard Diary */;
 		};
@@ -83,6 +88,10 @@
 				App/InteractionProbeView.swift,
 				App/VineyardDiaryiOSApp.swift,
 				Features/SharedImporter.swift,
+				Views/CompactEntryRow.swift,
+				Views/ContentView_iOS.swift,
+				Views/EntryEditorView_iOS.swift,
+				Views/StatisticsView_iOS.swift,
 			);
 			target = 9853D8FA2E66D28A00FDE0CB /* VineyardDiary iOS */;
 		};
@@ -513,7 +522,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202512141320;
+				CURRENT_PROJECT_VERSION = 202512161735;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -526,7 +535,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.collduno.VineyardDiary;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -549,7 +558,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202512141320;
+				CURRENT_PROJECT_VERSION = 202512161735;
 				DEVELOPMENT_TEAM = 9UCT2C937A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -562,7 +571,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.collduno.VineyardDiary;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

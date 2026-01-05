@@ -237,6 +237,11 @@ final class StatisticsViewModel: ObservableObject {
         let start = cal.date(from: DateComponents(year: selectedYear, month: 4, day: 1))!
         let lastData = dayMap(weather: weather).last?.0 ?? start
         let end = min(cal.startOfDay(for: Date()), lastData)
+        
+        // lowerBound > upperBound の場合は入れ替える
+        if start > end {
+            return end...start
+        }
         return start...end
     }
     
